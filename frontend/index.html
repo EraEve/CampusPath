@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusPath — 校园室内导航系统</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+    <!-- ============================================================ -->
+    <!-- Header                                                        -->
+    <!-- ============================================================ -->
+    <header class="header">
+        <h1>
+            <span class="logo">&#9733;</span>
+            CampusPath 校园室内导航
+        </h1>
+        <nav class="header-nav">
+            <button id="nav-map" class="active" onclick="switchView('map')">
+                &#128506; 地图导航
+            </button>
+            <button id="nav-compare" onclick="switchView('compare')">
+                &#128202; 算法对比
+            </button>
+            <button id="nav-anim" onclick="switchView('animation')">
+                &#9654; 搜索动画
+            </button>
+        </nav>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- Main Content                                                  -->
+    <!-- ============================================================ -->
+    <div class="main">
+
+        <!-- ------- Sidebar (Map View) ------- -->
+        <aside class="sidebar" id="sidebar">
+            <h3>&#128205; 起点</h3>
+            <div class="form-group">
+                <select id="sel-start" onchange="onStartChange()">
+                    <option value="">-- 选择起点 --</option>
+                </select>
+            </div>
+
+            <h3>&#127919; 终点</h3>
+            <div class="form-group">
+                <select id="sel-goal" onchange="onGoalChange()">
+                    <option value="">-- 选择终点 --</option>
+                </select>
+            </div>
+
+            <h3>&#128273; 算法</h3>
+            <div class="form-group">
+                <select id="sel-algorithm" onchange="onAlgorithmChange()">
+                    <option value="dijkstra">Dijkstra（加权最短路径）</option>
+                    <option value="a_star">A* 启发式搜索</option>
+                    <option value="bfs">BFS（无权最短路径）</option>
+                    <option value="bidirectional_bfs">双向 BFS</option>
+                    <option value="bidirectional_dijkstra">双向 Dijkstra</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="heuristic-group">
+                <label>启发式函数</label>
+                <select id="sel-heuristic">
+                    <option value="euclidean">欧几里得距离</option>
+                    <option value="manhattan">曼哈顿距离</option>
+                    <option value="floor_aware">楼层感知（含垂直惩罚）</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary btn-block" onclick="findPath()">
+                &#128269; 查找路径
+            </button>
+            <button class="btn btn-accent btn-block" onclick="compareAll()">
+                &#128202; 对比全部算法
+            </button>
+
+            <h3>&#127968; 楼层切换</h3>
+            <div class="floor-tabs" id="floor-tabs">
+                <button class="floor-tab active" onclick="switchFloor(1)">1F 大厅</button>
+                <button class="floor-tab" onclick="switchFloor(2)">2F 教学</button>
+                <button class="floor-tab" onclick="switchFloor(3)">3F 实验</button>
+                <button class="floor-tab" onclick="switchFloor(4)">4F 会议</button>
+            </div>
+        </aside>
+
+        <!-- ------- Canvas Area ------- -->
+        <div class="canvas-area" id="canvas-area">
+            <canvas id="map-canvas"></canvas>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#10B981"></span> 起点
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#EF4444"></span> 终点
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#3B82F6"></span> 路径
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#93C5FD"></span> 已探索
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background:#FBBF24; border: 2px solid #FBBF24;"></span> 前沿
+                </div>
+            </div>
+
+            <!-- Info bar -->
+            <div class="info-bar" id="info-bar">
+                <div class="info-item">
+                    <span class="label">路径距离</span>
+                    <span class="value path-dist" id="info-distance">-- m</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">探索节点</span>
+                    <span class="value nodes" id="info-visited">--</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">耗时</span>
+                    <span class="value time" id="info-time">-- ms</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">路径节点数</span>
+                    <span class="value" id="info-pathlen">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ------- Comparison View ------- -->
+        <div class="comparison-view" id="comparison-view" style="display:none;">
+            <h2 style="margin-bottom:16px;">&#128202; 全部算法对比</h2>
+            <p style="color:var(--text-secondary);margin-bottom:12px;" id="compare-pair-label">
+                选择起点和终点后点击"对比全部算法"
+            </p>
+            <div style="overflow-x:auto;">
+                <table class="comparison-table" id="compare-table">
+                    <thead>
+                        <tr>
+                            <th>算法</th>
+                            <th>路径距离 (m)</th>
+                            <th>探索节点数</th>
+                            <th>耗时 (ms)</th>
+                            <th>路径边数</th>
+                            <th>是否最优</th>
+                        </tr>
+                    </thead>
+                    <tbody id="compare-tbody">
+                        <tr><td colspan="6" style="color:var(--text-secondary);">
+                            暂无对比数据 — 请先在地图视图中选择起终点
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-accent" onclick="runBatchCompare()" style="margin-top:16px;">
+                &#128640; 运行全部10个场景批量对比
+            </button>
+            <div id="batch-result" style="margin-top:16px;font-size:0.8rem;"></div>
+        </div>
+
+        <!-- ------- Animation View ------- -->
+        <div id="animation-view" style="display:none;flex:1;flex-direction:column;">
+            <div class="canvas-area" id="anim-canvas-area">
+                <canvas id="anim-canvas"></canvas>
+            </div>
+            <div class="animation-controls">
+                <button onclick="animPlay()">&#9654; 播放</button>
+                <button onclick="animPause()">&#10074;&#10074; 暂停</button>
+                <button onclick="animStepBack()">&#9664; 后退</button>
+                <button onclick="animStepForward()">&#9654; 前进</button>
+                <button onclick="animReset()">&#8634; 重置</button>
+                <span class="step-counter" id="anim-step-counter">就绪</span>
+                <label style="font-size:0.75rem;margin-left:auto;">
+                    速度: <input type="range" class="speed-slider" min="50" max="1000" value="200"
+                           step="50" oninput="animSetSpeed(this.value)">
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- Scripts                                                          -->
+<!-- ================================================================ -->
+<script src="js/api.js"></script>
+<script src="js/map_renderer.js"></script>
+<script src="js/animation.js"></script>
+<script>
+// ====================================================================
+// Global State
+// ====================================================================
+let currentNode = '';
+let currentFloor = 1;
+let currentAlgorithm = 'dijkstra';
+let lastPathResult = null;
+let allNodes = [];
+
+// Renderers
+const mapCanvas = document.getElementById('map-canvas');
+const animCanvas = document.getElementById('anim-canvas');
+const mapRenderer = new MapRenderer(mapCanvas);
+const animRenderer = new MapRenderer(animCanvas);
+const animator = new AlgorithmAnimator(animRenderer);
+
+// ====================================================================
+// Initialization
+// ====================================================================
+async function init() {
+    try {
+        const [building, nodesData] = await Promise.all([
+            API.getBuilding(),
+            API.getAllNodes(),
+        ]);
+        allNodes = nodesData.nodes;
+
+        // Populate dropdowns grouped by floor
+        populateNodeSelectors(allNodes);
+
+        // Load default floor (1F)
+        await loadFloor(1);
+
+        // Canvas click handler
+        mapCanvas.addEventListener('click', onCanvasClick);
+        animCanvas.addEventListener('click', onAnimCanvasClick);
+
+        document.getElementById('info-distance').textContent = '-- m';
+        document.getElementById('info-visited').textContent = `Graph: ${building.total_vertices} nodes`;
+        document.getElementById('info-time').textContent = '-- ms';
+        document.getElementById('info-pathlen').textContent = '--';
+
+    } catch (err) {
+        showToast('Initialization failed: ' + err.message);
+    }
+}
+
+function populateNodeSelectors(nodes) {
+    const selStart = document.getElementById('sel-start');
+    const selGoal = document.getElementById('sel-goal');
+
+    // Group by floor
+    const byFloor = {};
+    for (const n of nodes) {
+        if (!byFloor[n.floor]) byFloor[n.floor] = [];
+        byFloor[n.floor].push(n);
+    }
+
+    for (const floor of [1, 2, 3, 4]) {
+        const nodesOnFloor = byFloor[floor] || [];
+        if (nodesOnFloor.length === 0) continue;
+
+        // Build group for start selector
+        const group1 = document.createElement('optgroup');
+        group1.label = `${floor}F`;
+        for (const n of nodesOnFloor) {
+            const opt = new Option(`[${floor}F] ${n.name}`, n.node_id);
+            opt.dataset.floor = floor;
+            group1.appendChild(opt);
+        }
+        selStart.appendChild(group1);
+
+        // Clone entire group for goal selector
+        const group2 = group1.cloneNode(true);
+        selGoal.appendChild(group2);
+    }
+}
+
+// ====================================================================
+// Floor switching
+// ====================================================================
+async function loadFloor(floor) {
+    try {
+        const data = await API.getFloor(floor);
+        mapRenderer.loadFloor(data);
+        animRenderer.loadFloor(data);
+        currentFloor = floor;
+
+        // Update floor tabs
+        document.querySelectorAll('.floor-tab').forEach(t => t.classList.remove('active'));
+        const tabs = document.querySelectorAll('.floor-tab');
+        if (tabs[floor - 1]) tabs[floor - 1].classList.add('active');
+    } catch (err) {
+        showToast('Failed to load floor: ' + err.message);
+    }
+}
+
+function switchFloor(floor) {
+    loadFloor(floor);
+}
+
+// ====================================================================
+// Canvas click handling
+// ====================================================================
+function onCanvasClick(e) {
+    const rect = mapCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const nodeId = mapRenderer.hitTest(e.clientX, e.clientY);
+    if (nodeId) {
+        // Set as start or goal
+        if (!document.getElementById('sel-start').value || currentNode === 'goal') {
+            document.getElementById('sel-start').value = nodeId;
+            currentNode = 'goal';
+        } else {
+            document.getElementById('sel-goal').value = nodeId;
+            currentNode = 'start';
+        }
+        highlightSelectedNodes();
+    }
+}
+
+function onAnimCanvasClick(e) {
+    // Same logic for animation view
+    const nodeId = animRenderer.hitTest(e.clientX, e.clientY);
+    if (nodeId) {
+        document.getElementById('sel-start').value = nodeId;
+        // Switch back to map view for setup
+        switchView('map');
+    }
+}
+
+function highlightSelectedNodes() {
+    const start = document.getElementById('sel-start').value;
+    const goal = document.getElementById('sel-goal').value;
+    const state = {};
+    if (start) state[start] = 'start';
+    if (goal) state[goal] = 'goal';
+    mapRenderer.setState(state, []);
+}
+
+function onStartChange() { highlightSelectedNodes(); }
+function onGoalChange() { highlightSelectedNodes(); }
+
+// ====================================================================
+// Algorithm selection
+// ====================================================================
+function onAlgorithmChange() {
+    currentAlgorithm = document.getElementById('sel-algorithm').value;
+    const hg = document.getElementById('heuristic-group');
+    hg.style.display = (currentAlgorithm === 'a_star') ? 'flex' : 'none';
+}
+
+onAlgorithmChange();  // initial state
+
+// ====================================================================
+// Pathfinding
+// ====================================================================
+async function findPath() {
+    const start = document.getElementById('sel-start').value;
+    const goal = document.getElementById('sel-goal').value;
+    if (!start || !goal) {
+        showToast('Please select both start and goal nodes.');
+        return;
+    }
+
+    try {
+        const algo = document.getElementById('sel-algorithm').value;
+        const heuristic = document.getElementById('sel-heuristic').value;
+
+        const result = await API.findPath({
+            start, goal, algorithm: algo, heuristic,
+            recordSteps: true,
+        });
+
+        lastPathResult = result;
+
+        // Switch to the floor of the start node
+        const startNode = allNodes.find(n => n.node_id === start);
+        if (startNode && startNode.floor !== currentFloor) {
+            await loadFloor(startNode.floor);
+        }
+
+        // Highlight path on map
+        const state = {};
+        state[start] = 'start';
+        state[goal] = 'goal';
+        for (const nid of result.path) {
+            if (nid !== start && nid !== goal) state[nid] = 'path';
+        }
+        mapRenderer.setState(state, result.path);
+
+        // Update info bar
+        document.getElementById('info-distance').textContent =
+            result.total_distance < 1e6 ? result.total_distance.toFixed(1) + ' m' : '∞';
+        document.getElementById('info-visited').textContent = result.nodes_visited;
+        document.getElementById('info-time').textContent = result.execution_time_ms + ' ms';
+        document.getElementById('info-pathlen').textContent = result.path.length;
+
+        // Load steps into animator
+        if (result.steps && result.steps.length > 0) {
+            animator.loadSteps(result.steps, result.path);
+        }
+
+    } catch (err) {
+        showToast('Pathfinding failed: ' + err.message);
+    }
+}
+
+// ====================================================================
+// Algorithm comparison
+// ====================================================================
+async function compareAll() {
+    const start = document.getElementById('sel-start').value;
+    const goal = document.getElementById('sel-goal').value;
+    if (!start || !goal) {
+        showToast('Please select both start and goal nodes.');
+        return;
+    }
+
+    try {
+        const result = await API.compareAlgorithms(start, goal);
+        lastPathResult = result;
+        switchView('compare');
+        renderComparisonTable(result, start, goal);
+    } catch (err) {
+        showToast('Comparison failed: ' + err.message);
+    }
+}
+
+function renderComparisonTable(comparison, start, goal) {
+    document.getElementById('compare-pair-label').textContent =
+        `起点: ${start}  →  终点: ${goal}`;
+
+    const tbody = document.getElementById('compare-tbody');
+    const results = comparison.results;
+    const dijkstraDist = results.dijkstra
+        ? results.dijkstra.total_distance : null;
+
+    const algoNames = [
+        { key: 'bfs', label: 'BFS' },
+        { key: 'dijkstra', label: 'Dijkstra' },
+        { key: 'a_star_euclidean', label: 'A* (Euclidean)' },
+        { key: 'a_star_manhattan', label: 'A* (Manhattan)' },
+        { key: 'a_star_floor_aware', label: 'A* (Floor-Aware)' },
+        { key: 'bidirectional_bfs', label: 'Bidirectional BFS' },
+        { key: 'bidirectional_dijkstra', label: 'Bidirectional Dijkstra' },
+    ];
+
+    let minNodes = Infinity;
+    for (const { key } of algoNames) {
+        if (results[key] && !results[key].error) {
+            minNodes = Math.min(minNodes, results[key].nodes_visited);
+        }
+    }
+
+    let html = '';
+    for (const { key, label } of algoNames) {
+        const r = results[key];
+        if (!r || r.error) {
+            html += `<tr><td>${label}</td><td colspan="5" style="color:var(--danger);">${r?.error || 'N/A'}</td></tr>`;
+            continue;
+        }
+        const dist = r.total_distance < 1e6 ? r.total_distance.toFixed(1) : '∞';
+        const isOptimal = dijkstraDist !== null && Math.abs(r.total_distance - dijkstraDist) < 0.01;
+        const isBestNodes = r.nodes_visited === minNodes;
+
+        html += `<tr>
+            <td><strong>${label}</strong></td>
+            <td class="${isOptimal ? 'best' : ''}">${dist} m</td>
+            <td class="${isBestNodes ? 'best' : ''}">${r.nodes_visited}</td>
+            <td>${r.execution_time_ms} ms</td>
+            <td>${r.path.length}</td>
+            <td class="${isOptimal ? 'best' : 'worst'}">${isOptimal ? '✓ 最优' : '✗ 次优'}</td>
+        </tr>`;
+    }
+
+    tbody.innerHTML = html;
+}
+
+async function runBatchCompare() {
+    try {
+        document.getElementById('batch-result').innerHTML =
+            '<p style="color:var(--text-secondary);">Running 10 scenario batch comparison...</p>';
+        const data = await API.batchCompare(false);
+        const agg = data.aggregate;
+
+        let html = '<h3 style="margin-top:12px;">聚合统计（10个场景平均）</h3>';
+        html += '<table class="comparison-table" style="margin-top:8px;">';
+        html += '<thead><tr><th>算法</th><th>平均距离(m)</th><th>平均探索节点</th><th>平均耗时(ms)</th><th>最优率</th></tr></thead><tbody>';
+
+        const algoNames = ['bfs','dijkstra','a_star_euclidean','a_star_manhattan','a_star_floor_aware','bidirectional_bfs','bidirectional_dijkstra'];
+        const algoLabels = ['BFS','Dijkstra','A* (Euc)','A* (Man)','A* (Floor)','Bi-BFS','Bi-Dijkstra'];
+
+        for (let i = 0; i < algoNames.length; i++) {
+            const key = algoNames[i];
+            html += `<tr>
+                <td><strong>${algoLabels[i]}</strong></td>
+                <td>${agg.avg_distance_m[key] || '--'} m</td>
+                <td>${agg.avg_nodes_visited[key] || '--'}</td>
+                <td>${agg.avg_time_ms[key] || '--'} ms</td>
+                <td>${key === 'dijkstra' ? '— (基准)' : ((agg.optimality_rate_vs_dijkstra[key] * 100) || 0).toFixed(0) + '%'}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('batch-result').innerHTML = html;
+
+    } catch (err) {
+        document.getElementById('batch-result').innerHTML =
+            `<p style="color:var(--danger);">Batch comparison failed: ${err.message}</p>`;
+    }
+}
+
+// ====================================================================
+// View switching
+// ====================================================================
+function switchView(view) {
+    document.getElementById('canvas-area').style.display = view === 'map' ? 'block' : 'none';
+    document.getElementById('sidebar').style.display = view === 'map' ? 'flex' : 'none';
+    document.getElementById('comparison-view').style.display = view === 'compare' ? 'block' : 'none';
+    document.getElementById('animation-view').style.display = view === 'animation' ? 'flex' : 'none';
+
+    document.querySelectorAll('.header-nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(`nav-${view}`).classList.add('active');
+
+    // Resize canvases when becoming visible
+    if (view === 'animation') {
+        animRenderer._resize();
+        animRenderer.render();
+    }
+    if (view === 'map') {
+        mapRenderer._resize();
+        mapRenderer.render();
+    }
+}
+
+// ====================================================================
+// Animation controls
+// ====================================================================
+function animPlay() {
+    // Load animation data if needed
+    const start = document.getElementById('sel-start').value;
+    const goal = document.getElementById('sel-goal').value;
+    const algo = document.getElementById('sel-algorithm').value;
+    const heuristic = document.getElementById('sel-heuristic').value;
+
+    if (!animator.steps.length && start && goal) {
+        API.getAlgorithmSteps(algo, start, goal, heuristic).then(data => {
+            animator.loadSteps(data.steps, data.path);
+            animator.play();
+        }).catch(err => showToast(err.message));
+    } else {
+        animator.play();
+    }
+}
+function animPause() { animator.pause(); }
+function animStepForward() { animator.stepForward(); }
+function animStepBack() { animator.stepBackward(); }
+function animReset() { animator.stop(); }
+function animSetSpeed(ms) { animator.setSpeed(parseInt(ms)); }
+
+// ====================================================================
+// Toast notifications
+// ====================================================================
+function showToast(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+}
+
+// ====================================================================
+// Keyboard shortcuts
+// ====================================================================
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.activeElement?.tagName !== 'INPUT') {
+        findPath();
+    }
+    if (e.key >= '1' && e.key <= '4' && !e.ctrlKey && !e.metaKey) {
+        switchFloor(parseInt(e.key));
+    }
+});
+
+// ====================================================================
+// Start
+// ====================================================================
+init();
+</script>
+</body>
+</html>

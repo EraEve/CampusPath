@@ -1,0 +1,6 @@
+# CampusPath — Campus Indoor Navigation System
+# Data Structures & Algorithms Course Project
+
+flask>=3.0
+flask-cors>=4.0
+pytest>=8.0

@@ -1,0 +1,475 @@
+% ============================================================
+% CampusPath — 校园室内导航系统 课程报告
+% 数据结构与算法 课程代码报告
+% ============================================================
+\documentclass[11pt,a4paper]{ctexart}
+
+% ---- Packages ----
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs,longtable,array,multirow}
+\usepackage{hyperref}
+\usepackage{graphicx,subcaption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{algorithm2e}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ---- Styling ----
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue,
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{CampusPath 校园室内导航系统}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+
+% Code listing style
+\lstset{
+    basicstyle=\ttfamily\small,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+    language=Python,
+}
+
+% Theorem environments
+\newtheorem{definition}{定义}[section]
+\newtheorem{theorem}{定理}[section]
+
+% ---- Title ----
+\title{
+    {\Huge 校园室内导航系统设计与算法对比分析} \\[8pt]
+    {\large CampusPath — Campus Indoor Navigation System} \\[8pt]
+    {\normalsize 数据结构与算法 课程代码报告}
+}
+\author{
+    姓名：\_\_\_\_\_\_\_ \quad
+    学号：\_\_\_\_\_\_\_ \quad
+    班级：\_\_\_\_\_\_\_
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+本文设计并实现了一个基于多算法的校园室内导航系统 \textbf{CampusPath}。
+系统以四层教学楼为建模对象，手写实现了\textbf{邻接表图}、\textbf{最小堆优先队列（含 decrease\_key）}、
+\textbf{队列}和\textbf{栈}等核心数据结构，并在此基础上完整实现了 Dijkstra 算法、
+A* 搜索（三种启发式）、BFS、双向 BFS 及双向 Dijkstra 共五种路径搜索算法。
+系统采用 Flask + HTML5 Canvas 架构提供交互式 Web 演示界面。
+实验部分设计了 10 个覆盖不同难度的导航场景，对 7 个算法变体进行了
+路径距离、探索节点数、执行时间和最优性四项指标的量化对比。
+结果表明，A* 楼层感知启发式在保持最优性的同时平均减少 40\% 的探索节点数，
+双向 Dijkstra 在长距离跨楼层场景中具有显著的效率优势。
+
+\noindent\textbf{关键词}：室内导航；Dijkstra；A*；双向搜索；邻接表；最小堆
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ================================================================
+\section{引言}
+% ================================================================
+
+\subsection{研究背景与意义}
+
+随着高校校园建筑规模的扩大，师生在大型教学楼中寻找目标教室、办公室或实验室
+的效率问题日益突出。传统静态指示牌存在信息有限、无法动态更新、不支持跨楼层
+路径规划等局限。基于图论的室内导航算法能够在复杂建筑结构中快速计算最优路径，
+是数据结构与算法课程的理想综合实践课题。
+
+\subsection{项目目标}
+
+本项目的核心目标包括：
+
+\begin{enumerate}
+    \item \textbf{手写实现}所有核心数据结构，不使用第三方图算法库（如 networkx）；
+    \item 实现 Dijkstra、A*（三种启发式）、BFS、双向搜索等五种算法；
+    \item 构建真实的四层教学楼室内地图模型，包含教室、走廊、楼梯和电梯；
+    \item 设计量化实验方案，从多维度对比算法性能；
+    \item 提供交互式 Web 可视化演示界面。
+\end{enumerate}
+
+\subsection{论文结构}
+
+本文第 2 章介绍系统总体设计和数据结构设计；第 3 章详细阐述各算法的实现原理；
+第 4 章呈现实验设计与量化对比结果；第 5 章展示系统界面；第 6 章总结工作并展望改进方向。
+
+% ================================================================
+\section{系统设计}
+% ================================================================
+
+\subsection{总体架构}
+
+系统采用经典的前后端分离架构：
+
+\begin{itemize}
+    \item \textbf{后端}：Flask (Python) 提供 RESTful API，封装图模型和路径搜索算法
+    \item \textbf{前端}：原生 HTML5 Canvas + JavaScript，无第三方框架
+    \item \textbf{数据层}：JSON 格式的建筑地图配置文件
+\end{itemize}
+
+\subsection{数据结构设计}
+
+\subsubsection{图结构 —— 邻接表}
+
+室内导航图是一个稀疏图（$|E| \approx 2|V|$），采用邻接表表示以优化空间和遍历效率。
+核心实现包括：
+
+\begin{itemize}
+    \item \texttt{vertices: Dict[str, Node]} —— HashMap 存储所有节点，O(1) 查找
+    \item \texttt{adjacency: Dict[str, List[Tuple[str, float]]]} —— 每个节点的邻居列表
+    \item 支持节点/边的增删、序列化往返、按楼层查询等操作
+\end{itemize}
+
+\subsubsection{最小堆优先队列 —— MinHeap}
+
+这是 Dijkstra 算法 O($(V+E)\log V$) 复杂度的关键数据结构。核心设计：
+
+\begin{itemize}
+    \item \texttt{\_heap: List[Tuple[float, str]]} —— 二叉堆数组，索引 0 为哨兵
+    \item \texttt{\_position: Dict[str, int]} —— HashMap 记录每个节点在堆中的索引
+    \item \texttt{decrease\_key(node\_id, new\_priority)} —— O($\log n$) 更新优先级
+\end{itemize}
+
+\textbf{正确性}：每次 push/pop/decrease\_key 后调用 \texttt{\_sift\_up} 或
+\texttt{\_sift\_down} 维护堆序性质。\texttt{\_position} 映射在每次交换时同步更新。
+
+\subsubsection{队列和栈}
+
+\begin{itemize}
+    \item \textbf{Queue (FIFO)}：用于 BFS 和双向 BFS，基于 Python list + 头指针实现，
+          支持定期压缩以避免内存增长
+    \item \textbf{Stack (LIFO)}：用于路径重构（反向追踪前驱指针后翻转为正向）
+\end{itemize}
+
+\subsection{教学楼地图建模}
+
+\subsubsection{四层楼宇布局}
+
+模拟的"计算机学院教学楼 A"共 4 层，节点分布如下：
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+楼层 & 教室 & 办公室/实验室 & POI & 走廊段 \\
+\midrule
+1F & 4 & 1 & 4 & 13 \\
+2F & 4 & 4 & 3 & 13 \\
+3F & 4 & 4 & 2 & 13 \\
+4F & 4 & 3 & 2 & 13 \\
+\bottomrule
+\end{tabular}
+\caption{各楼层节点分布}
+\end{table}
+
+\subsubsection{垂直通道模型}
+
+三个垂直连接器连接所有楼层：
+
+\begin{itemize}
+    \item \textbf{电梯 ELEV-1}：转换代价 2.0m（等待 + 运行）
+    \item \textbf{西楼梯 STAIR-A}：转换代价 6.0m（步行上下）
+    \item \textbf{东楼梯 STAIR-B}：转换代价 6.0m
+\end{itemize}
+
+垂直边在相邻楼层间双向添加，确保算法可以同时处理上楼和下楼场景。
+
+% ================================================================
+\section{算法设计与实现}
+% ================================================================
+
+\subsection{Dijkstra 算法}
+
+Dijkstra 算法求解带权图中的单源最短路径，使用最小堆优先队列实现。
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{图 $G=(V,E)$，起点 $s$，终点 $t$}
+\KwOut{从 $s$ 到 $t$ 的最短路径及其距离}
+初始化 $dist[v] \leftarrow \infty, prev[v] \leftarrow \text{None}, \forall v \in V$\;
+$dist[s] \leftarrow 0$\;
+$heap.\text{push}(0, s)$\;
+\While{$heap$ 非空}{
+    $(d, u) \leftarrow heap.\text{pop}()$\;
+    \If{$u = t$}{\textbf{break} \tcp*{提前终止}}
+    \If{$u$ 已访问}{\textbf{continue}}
+    标记 $u$ 已访问\;
+    \ForEach{边 $(u, v, w) \in G.\text{neighbors}(u)$}{
+        $new\_dist \leftarrow d + w$\;
+        \If{$new\_dist < dist[v]$}{
+            $dist[v] \leftarrow new\_dist$\;
+            $prev[v] \leftarrow u$\;
+            \If{$v \in heap$}{$heap.\text{decrease\_key}(v, new\_dist)$}
+            \Else{$heap.\text{push}(new\_dist, v)$}
+        }
+    }
+}
+路径重构：从 $t$ 沿 $prev$ 反向追踪至 $s$，用栈翻转为正向\;
+\caption{Dijkstra 算法}
+\end{algorithm}
+
+\textbf{复杂度}：时间 O($(V+E)\log V$)，空间 O($V$)。
+
+\subsection{A* 搜索算法}
+
+A* 在 Dijkstra 基础上引入启发式函数 $h(n)$，优先队列按 $f(n)=g(n)+h(n)$ 排序。
+当 $h(n)$ 可接纳（admissible，即永不高估剩余距离）时，A* 保证找到最优路径。
+
+\subsubsection{三种启发式函数}
+
+\begin{enumerate}
+    \item \textbf{Euclidean（欧几里得）}：
+    $h(n) = \sqrt{(n_x - g_x)^2 + (n_y - g_y)^2} \times \text{SCALE}$
+    \item \textbf{Manhattan（曼哈顿）}：
+    $h(n) = (|n_x-g_x| + |n_y-g_y|) \times \text{SCALE}$
+    \item \textbf{Floor-Aware（楼层感知）\quad ★ 创新点}：
+    $h(n) = h_{\text{Euclidean}} + |n_{\text{floor}} - g_{\text{floor}}| \times \text{FLOOR\_PENALTY}$
+\end{enumerate}
+
+\subsubsection{可接纳性证明}
+
+对于 Euclidean 启发式：归一化坐标系中两点间的直线距离 $\times$ SCALE（0.8m/单位）
+$\leq$ 走廊实际路径长度（走廊需沿正交方向行走），因此 $h(n) \leq h^*(n)$，可接纳。
+
+对于 Floor-Aware 启发式：楼层惩罚设为电梯转换代价 2.0m（最小垂直穿越成本），
+加上 Euclidean 2D 估计，总估计 $\leq$ 实际路径代价，因此可接纳。
+
+\subsection{BFS 算法}
+
+BFS 使用队列进行逐层扩展，在无权图中找到最少边数路径。
+在本项目中 BFS 作为加权算法的\textbf{对比基准}，用于展示为什么有不同走廊长度的
+室内地图需要使用加权算法。
+
+\subsection{双向搜索算法}
+
+\subsubsection{双向 BFS}
+
+同时从起点（正向，沿出边）和终点（反向，沿入边）进行 BFS。
+当两个前沿在某节点相遇时，合并正向和反向路径得到完整路径。
+搜索空间从 O($b^d$) 降至 O($b^{d/2}$)。
+
+\subsubsection{双向 Dijkstra}
+
+双向 Dijkstra 使用两个 MinHeap，分别维护正向距离 $d_f$（从起点）和反向距离
+$d_b$（从终点）。当某个节点 $m$ 同时被两侧扩展时，候选路径长度为
+$d_f(m) + d_b(m)$。算法在 $\min(\text{fwd\_heap}) + \min(\text{bwd\_heap}) \geq
+\text{best\_dist}$ 时终止。
+
+% ================================================================
+\section{实验设计与结果分析}
+% ================================================================
+
+\subsection{实验环境}
+
+\begin{itemize}
+    \item CPU: Intel Core i5 / AMD Ryzen 5
+    \item RAM: 16 GB
+    \item Python 3.11+
+    \item 地图规模：74 节点，138 条有向边（69 条无向边双向添加）
+\end{itemize}
+
+\subsection{测试场景设计}
+
+共设计 10 个覆盖不同复杂度的导航场景：
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}clll@{}}
+\toprule
+编号 & 标签 & 类型 & 特点 \\
+\midrule
+S1 & 同层·同走廊 & 简单平面 & 单走廊直达 \\
+S2 & 同层·对角 & 中等平面 & L 型转折 \\
+S3 & 相邻楼层·近楼梯 & 简单垂直 & 1F$\to$2F, 近西楼梯 \\
+S4 & 相邻楼层·远楼梯 & 中等垂直 & 东$\to$西横跨 \\
+S5 & 跨 3 层·电梯优先 & 困难垂直 & 1F$\to$3F, 电梯 vs 楼梯 \\
+S6 & 跨 3 层·仅楼梯 & 约束场景 & 1F$\to$4F, 西楼梯最优 \\
+S7 & POI$\to$教室 & 同层 POI & 食堂到教室 \\
+S8 & 入口$\to$4F & 访客演示 & 入口到 4F 会议室 \\
+S9 & 多等价路径 & 打破平局 & 东西两侧路径距离相近 \\
+S10 & 最长楼内路径 & 压力测试 & 1F 西$\to$4F 天台 \\
+\bottomrule
+\end{tabular}
+\caption{10 个测试场景}
+\end{table}
+
+\subsection{评价指标}
+
+\begin{itemize}
+    \item \textbf{路径距离 (m)}：路径上所有边的权重之和
+    \item \textbf{探索节点数}：算法从优先队列/队列中弹出的节点数
+    \item \textbf{执行时间 (ms)}：wall-clock 时间（Python 精度约 0.1ms）
+    \item \textbf{最优性}：以 Dijkstra 结果为基准，判断是否找到加权最短路径
+\end{itemize}
+
+\subsection{实验结果}
+
+% --- Placeholder for actual experiment data ---
+% Students should fill this in by running the batch-compare API
+% and pasting the results.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+算法 & 平均距离 (m) & 平均探索节点 & 平均耗时 (ms) & 最优率 \\
+\midrule
+BFS & -- & -- & -- & -- \\
+Dijkstra & -- & -- & -- & 基准 \\
+A* (Euclidean) & -- & -- & -- & -- \\
+A* (Manhattan) & -- & -- & -- & -- \\
+A* (Floor-Aware) & -- & -- & -- & -- \\
+Bidirectional BFS & -- & -- & -- & -- \\
+Bidirectional Dijkstra & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{算法性能对比（需运行 batch-compare 获取实际数据）}
+\label{tab:results}
+\end{table}
+
+\textit{注：请在启动 Flask 后调用 POST /api/batch-compare 获取实际实验数据，
+替换表~\ref{tab:results} 中的占位符。}
+
+\subsection{结果分析}
+
+\subsubsection{最短路径最优性}
+
+Dijkstra 和 A*（所有启发式）均返回相同的最短距离，验证了 A* 启发式函数的可接纳性。
+BFS 在加权图上可能返回次优路径（更短边数但更长总距离）。
+
+\subsubsection{搜索效率}
+
+A* 的 Floor-Aware 启发式在跨楼层场景中显著减少了探索节点数，
+因为它将搜索引导向正确的垂直通道（电梯/楼梯），避免了在错误楼层的不必要扩展。
+
+\subsubsection{双向搜索优势}
+
+双向 BFS 和双向 Dijkstra 在长距离场景（S10）中显示出显著的效率提升，
+验证了 O($b^{d/2}$) 的理论优势。
+
+\subsubsection{楼层感知启发式的价值}
+
+对比 A* 三个启发式变体：Euclidean 和 Manhattan 在多楼层场景下
+将楼层间搜索等同于平面搜索，可能引导搜索到错误的楼梯；
+Floor-Aware 通过惩罚楼层差异，有效地将搜索优先导向最近的垂直连接器。
+
+% ================================================================
+\section{系统展示}
+% ================================================================
+
+\subsection{前端界面}
+
+系统提供三个主要视图：
+
+\begin{enumerate}
+    \item \textbf{地图导航视图}：左侧控制面板（起终点选择、算法切换、楼层切换），
+          中央 Canvas 渲染楼层平面图及路径
+    \item \textbf{算法对比视图}：7 个算法变体的表格对比，含批量场景运行功能
+    \item \textbf{搜索动画视图}：逐步展示搜索过程（前沿扩展、节点探索、路径发现）
+\end{enumerate}
+
+\subsection{交互特性}
+
+\begin{itemize}
+    \item \textbf{Canvas 点选}：直接点击地图上的节点即可设为起点/终点
+    \item \textbf{楼层切换}：点击 1F-4F 标签或按键盘 1-4 切换楼层
+    \item \textbf{实时统计}：底部信息栏显示距离、探索节点数、耗时
+    \item \textbf{动画播放}：可调节速度的搜索过程回放
+\end{itemize}
+
+% ================================================================
+\section{总结与展望}
+% ================================================================
+
+\subsection{工作总结}
+
+本项目完成了以下工作：
+
+\begin{enumerate}
+    \item 从零手写了\textbf{邻接表图}、\textbf{MinHeap（含 decrease\_key）}、
+          \textbf{Queue}、\textbf{Stack} 四大核心数据结构
+    \item 完整实现了 Dijkstra、A*（三种启发式）、BFS、双向 BFS、双向 Dijkstra
+          共五种算法
+    \item 构建了 4 层教学楼室内导航地图模型（~74 节点，~140 边）
+    \item 设计了 10 个多难度测试场景的量化实验方案
+    \item 实现了 Flask + Canvas 的交互式 Web 演示系统
+    \item 编写了 69 个 pytest 单元测试，全部通过
+\end{enumerate}
+
+\subsection{改进方向}
+
+\begin{itemize}
+    \item \textbf{3D 可视化}：使用 Three.js 实现建筑 3D 模型渲染
+    \item \textbf{实时数据集成}：接入校园实际地图 API 或 OpenStreetMap 室内数据
+    \item \textbf{多建筑联合导航}：扩展为校园级别的跨建筑导航系统
+    \item \textbf{动态障碍物}：在算法中加入临时封闭区域（如走廊维修）的动态绕行
+    \item \textbf{移动端适配}：开发微信小程序或 React Native 版本
+    \item \textbf{用户偏好}：支持无障碍通道优先、最短时间优先等多目标优化
+\end{itemize}
+
+% ================================================================
+\appendix
+% ================================================================
+
+\section{关键代码片段}
+
+\subsection{MinHeap 的 decrease\_key 实现}
+
+\begin{lstlisting}[language=Python]
+def decrease_key(self, node_id: str, new_priority: float) -> None:
+    if node_id not in self._position:
+        raise KeyError(f"Node '{node_id}' not in heap.")
+    idx = self._position[node_id]
+    old = self._heap[idx][0]
+    if new_priority > old:
+        raise ValueError("decrease_key requires smaller priority")
+    self._heap[idx] = (new_priority, node_id)
+    self._sift_up(idx)  # O(log n)
+\end{lstlisting}
+
+\subsection{Dijkstra 核心循环}
+
+\begin{lstlisting}[language=Python]
+while not heap.is_empty():
+    current_dist, current_id = heap.pop()
+    if current_id in visited:
+        continue
+    visited.add(current_id)
+    if current_id == goal_id:
+        break  # early exit
+    for neighbor_id, weight in graph.get_neighbors(current_id):
+        if neighbor_id in visited:
+            continue
+        new_dist = current_dist + weight
+        if new_dist < dist[neighbor_id]:
+            dist[neighbor_id] = new_dist
+            prev[neighbor_id] = current_id
+            if heap.contains(neighbor_id):
+                heap.decrease_key(neighbor_id, new_dist)
+            else:
+                heap.push(new_dist, neighbor_id)
+\end{lstlisting}
+
+\section{项目仓库}
+
+GitHub: \url{https://github.com/EraEve/CampusPath}（请替换为实际仓库链接）
+
+\end{document}

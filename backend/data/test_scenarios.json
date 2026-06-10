@@ -1,0 +1,85 @@
+{
+  "description": "10 predefined test scenarios for algorithm comparison experiments. Each scenario targets a different navigation difficulty level — from simple same-floor paths to complex cross-floor routes.",
+  "scenarios": [
+    {
+      "id": 1,
+      "label": "S1: 同层·同走廊 (简单)",
+      "start": "F1-R101",
+      "goal": "F1-R103",
+      "category": "same_floor_easy",
+      "description": "同一楼层同一条走廊两侧的教室，路径短且无分叉"
+    },
+    {
+      "id": 2,
+      "label": "S2: 同层·对角 (中等平面)",
+      "start": "F1-R101",
+      "goal": "F1-CANTEEN",
+      "category": "same_floor_medium",
+      "description": "同一楼层对角线位置，需要经过L型走廊转折"
+    },
+    {
+      "id": 3,
+      "label": "S3: 相邻楼层·近楼梯 (简单垂直)",
+      "start": "F1-R101",
+      "goal": "F2-R201",
+      "category": "vertical_easy",
+      "description": "1F→2F，起点靠近西楼梯，直达即可"
+    },
+    {
+      "id": 4,
+      "label": "S4: 相邻楼层·远楼梯 (中等垂直)",
+      "start": "F1-CANTEEN",
+      "goal": "F2-COMPLAB1",
+      "category": "vertical_medium",
+      "description": "1F→2F，起点在东侧需横跨走廊到西侧目标"
+    },
+    {
+      "id": 5,
+      "label": "S5: 跨3层·电梯优先 (困难垂直)",
+      "start": "F1-ENTRANCE",
+      "goal": "F3-RESEARCH1",
+      "category": "vertical_hard",
+      "description": "1F→3F，电梯距离最短，验证算法是否选电梯vs楼梯"
+    },
+    {
+      "id": 6,
+      "label": "S6: 跨3层·仅楼梯 (约束场景)",
+      "start": "F1-OFFICE",
+      "goal": "F4-CONF1",
+      "category": "vertical_constrained",
+      "description": "1F→4F，起终点都靠近西侧，西楼梯应是最优选择"
+    },
+    {
+      "id": 7,
+      "label": "S7: POI→教室·同层",
+      "start": "F1-CANTEEN",
+      "goal": "F1-R104",
+      "category": "same_floor_poi",
+      "description": "食堂到教室，同层东侧短距离移动"
+    },
+    {
+      "id": 8,
+      "label": "S8: 入口→4F 会议室 (导航演示)",
+      "start": "F1-ENTRANCE",
+      "goal": "F4-MEET1",
+      "category": "demo_visitor",
+      "description": "模拟访客场景：从主入口到4楼会议室，电梯+走廊"
+    },
+    {
+      "id": 9,
+      "label": "S9: 多等价路径 (打破平局)",
+      "start": "F1-LOBBY",
+      "goal": "F1-R102",
+      "category": "tie_breaking",
+      "description": "大厅到102教室，东西两侧路径距离相近"
+    },
+    {
+      "id": 10,
+      "label": "S10: 最长楼内路径 (压力测试)",
+      "start": "F1-R101",
+      "goal": "F4-ROOFTOP",
+      "category": "stress_test",
+      "description": "1F最西侧到4F天台，跨越全部楼层，测试算法在大图上的性能"
+    }
+  ]
+}

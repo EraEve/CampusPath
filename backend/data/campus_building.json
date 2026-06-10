@@ -1,0 +1,239 @@
+{
+  "building": {
+    "name": "计算机学院教学楼 A",
+    "floors": [1, 2, 3, 4],
+    "floor_height_m": 4.0,
+    "scale": {"x_range": [0, 100], "y_range": [0, 60]}
+  },
+  "vertical_connectors": {
+    "stairs": [
+      {
+        "id": "STAIR-A",
+        "label": "西楼梯 A",
+        "x": 18.0,
+        "y": 30.0,
+        "floors_connected": [1, 2, 3, 4],
+        "transition_cost_m": 6.0
+      },
+      {
+        "id": "STAIR-B",
+        "label": "东楼梯 B",
+        "x": 82.0,
+        "y": 30.0,
+        "floors_connected": [1, 2, 3, 4],
+        "transition_cost_m": 6.0
+      }
+    ],
+    "elevators": [
+      {
+        "id": "ELEV-1",
+        "label": "中央电梯 1",
+        "x": 50.0,
+        "y": 30.0,
+        "floors_connected": [1, 2, 3, 4],
+        "transition_cost_m": 2.0
+      }
+    ]
+  },
+  "floors": {
+    "1": {
+      "name": "一层 · 大厅与公共服务",
+      "rooms": [
+        {"id": "F1-ENTRANCE", "name": "主入口", "type": "entrance", "x": 50.0, "y": 58.0},
+        {"id": "F1-LOBBY", "name": "大厅", "type": "poi", "x": 50.0, "y": 48.0},
+        {"id": "F1-R101", "name": "101 阶梯教室", "type": "room", "x": 15.0, "y": 15.0},
+        {"id": "F1-R102", "name": "102 阶梯教室", "type": "room", "x": 35.0, "y": 15.0},
+        {"id": "F1-R103", "name": "103 普通教室", "type": "room", "x": 65.0, "y": 15.0},
+        {"id": "F1-R104", "name": "104 普通教室", "type": "room", "x": 85.0, "y": 15.0},
+        {"id": "F1-CANTEEN", "name": "食堂", "type": "poi", "x": 85.0, "y": 50.0},
+        {"id": "F1-RESTROOM-W", "name": "西卫生间", "type": "poi", "x": 12.0, "y": 48.0},
+        {"id": "F1-RESTROOM-E", "name": "东卫生间", "type": "poi", "x": 88.0, "y": 48.0},
+        {"id": "F1-OFFICE", "name": "安保办公室", "type": "room", "x": 35.0, "y": 50.0}
+      ],
+      "corridors": [
+        {"id": "F1-COR-H", "name": "主走廊(横)", "segments": [[10.0, 30.0], [30.0, 30.0], [50.0, 30.0], [70.0, 30.0], [90.0, 30.0]]},
+        {"id": "F1-COR-V-W", "name": "西走廊(竖)", "segments": [[18.0, 10.0], [18.0, 25.0], [18.0, 45.0], [18.0, 55.0]]},
+        {"id": "F1-COR-V-E", "name": "东走廊(竖)", "segments": [[82.0, 10.0], [82.0, 25.0], [82.0, 45.0], [82.0, 55.0]]}
+      ],
+      "edges": [
+        ["F1-ENTRANCE", "F1-LOBBY", 8.0],
+        ["F1-LOBBY", "F1-COR-H-SEG2", 4.0],
+        ["F1-COR-H-SEG0", "F1-COR-H-SEG1", 8.0],
+        ["F1-COR-H-SEG1", "F1-COR-H-SEG2", 8.0],
+        ["F1-COR-H-SEG2", "F1-COR-H-SEG3", 8.0],
+        ["F1-COR-H-SEG3", "F1-COR-H-SEG4", 8.0],
+        ["F1-COR-H-SEG0", "F1-COR-V-W-SEG1", 6.0],
+        ["F1-COR-H-SEG4", "F1-COR-V-E-SEG1", 6.0],
+        ["F1-COR-V-W-SEG0", "F1-COR-V-W-SEG1", 6.0],
+        ["F1-COR-V-W-SEG1", "F1-COR-V-W-SEG2", 8.0],
+        ["F1-COR-V-W-SEG2", "F1-COR-V-W-SEG3", 4.0],
+        ["F1-COR-V-E-SEG0", "F1-COR-V-E-SEG1", 6.0],
+        ["F1-COR-V-E-SEG1", "F1-COR-V-E-SEG2", 8.0],
+        ["F1-COR-V-E-SEG2", "F1-COR-V-E-SEG3", 4.0],
+        ["F1-COR-V-W-SEG0", "F1-R101", 3.0],
+        ["F1-COR-V-W-SEG0", "F1-R102", 4.0],
+        ["F1-COR-V-E-SEG0", "F1-R103", 4.0],
+        ["F1-COR-V-E-SEG0", "F1-R104", 3.0],
+        ["F1-COR-H-SEG0", "F1-STAIR-A", 3.0],
+        ["F1-COR-H-SEG4", "F1-STAIR-B", 3.0],
+        ["F1-COR-H-SEG2", "F1-ELEV-1", 2.0],
+        ["F1-COR-V-W-SEG3", "F1-RESTROOM-W", 2.0],
+        ["F1-COR-V-E-SEG3", "F1-RESTROOM-E", 2.0],
+        ["F1-COR-V-E-SEG3", "F1-CANTEEN", 4.0],
+        ["F1-COR-V-W-SEG3", "F1-OFFICE", 3.0]
+      ]
+    },
+    "2": {
+      "name": "二层 · 教学与办公区",
+      "rooms": [
+        {"id": "F2-R201", "name": "201 多媒体教室", "type": "room", "x": 15.0, "y": 15.0},
+        {"id": "F2-R202", "name": "202 多媒体教室", "type": "room", "x": 35.0, "y": 15.0},
+        {"id": "F2-R203", "name": "203 自习室", "type": "room", "x": 65.0, "y": 15.0},
+        {"id": "F2-R204", "name": "204 自习室", "type": "room", "x": 85.0, "y": 15.0},
+        {"id": "F2-OFF201", "name": "教师办公室 201", "type": "room", "x": 12.0, "y": 48.0},
+        {"id": "F2-OFF202", "name": "教师办公室 202", "type": "room", "x": 88.0, "y": 48.0},
+        {"id": "F2-COMPLAB1", "name": "计算机实验室 A", "type": "room", "x": 25.0, "y": 48.0},
+        {"id": "F2-COMPLAB2", "name": "计算机实验室 B", "type": "room", "x": 75.0, "y": 48.0},
+        {"id": "F2-LOUNGE", "name": "学生休息区", "type": "poi", "x": 50.0, "y": 48.0},
+        {"id": "F2-RESTROOM-W", "name": "西卫生间", "type": "poi", "x": 12.0, "y": 10.0},
+        {"id": "F2-RESTROOM-E", "name": "东卫生间", "type": "poi", "x": 88.0, "y": 10.0}
+      ],
+      "corridors": [
+        {"id": "F2-COR-H", "name": "主走廊(横)", "segments": [[10.0, 30.0], [30.0, 30.0], [50.0, 30.0], [70.0, 30.0], [90.0, 30.0]]},
+        {"id": "F2-COR-V-W", "name": "西走廊(竖)", "segments": [[18.0, 10.0], [18.0, 25.0], [18.0, 45.0], [18.0, 55.0]]},
+        {"id": "F2-COR-V-E", "name": "东走廊(竖)", "segments": [[82.0, 10.0], [82.0, 25.0], [82.0, 45.0], [82.0, 55.0]]}
+      ],
+      "edges": [
+        ["F2-COR-H-SEG0", "F2-COR-H-SEG1", 8.0],
+        ["F2-COR-H-SEG1", "F2-COR-H-SEG2", 8.0],
+        ["F2-COR-H-SEG2", "F2-COR-H-SEG3", 8.0],
+        ["F2-COR-H-SEG3", "F2-COR-H-SEG4", 8.0],
+        ["F2-COR-H-SEG0", "F2-COR-V-W-SEG1", 6.0],
+        ["F2-COR-H-SEG4", "F2-COR-V-E-SEG1", 6.0],
+        ["F2-COR-V-W-SEG0", "F2-COR-V-W-SEG1", 6.0],
+        ["F2-COR-V-W-SEG1", "F2-COR-V-W-SEG2", 8.0],
+        ["F2-COR-V-W-SEG2", "F2-COR-V-W-SEG3", 4.0],
+        ["F2-COR-V-E-SEG0", "F2-COR-V-E-SEG1", 6.0],
+        ["F2-COR-V-E-SEG1", "F2-COR-V-E-SEG2", 8.0],
+        ["F2-COR-V-E-SEG2", "F2-COR-V-E-SEG3", 4.0],
+        ["F2-COR-V-W-SEG0", "F2-R201", 3.0],
+        ["F2-COR-V-W-SEG0", "F2-R202", 4.0],
+        ["F2-COR-V-E-SEG0", "F2-R203", 4.0],
+        ["F2-COR-V-E-SEG0", "F2-R204", 3.0],
+        ["F2-COR-V-W-SEG3", "F2-OFF201", 2.0],
+        ["F2-COR-V-W-SEG3", "F2-COMPLAB1", 4.0],
+        ["F2-COR-H-SEG2", "F2-LOUNGE", 3.0],
+        ["F2-COR-V-E-SEG3", "F2-COMPLAB2", 4.0],
+        ["F2-COR-V-E-SEG3", "F2-OFF202", 2.0],
+        ["F2-COR-V-W-SEG0", "F2-RESTROOM-W", 2.0],
+        ["F2-COR-V-E-SEG0", "F2-RESTROOM-E", 2.0],
+        ["F2-COR-H-SEG0", "F2-STAIR-A", 3.0],
+        ["F2-COR-H-SEG4", "F2-STAIR-B", 3.0],
+        ["F2-COR-H-SEG2", "F2-ELEV-1", 2.0]
+      ]
+    },
+    "3": {
+      "name": "三层 · 实验室与研究区",
+      "rooms": [
+        {"id": "F3-R301", "name": "301 综合实验室", "type": "room", "x": 15.0, "y": 15.0},
+        {"id": "F3-R302", "name": "302 综合实验室", "type": "room", "x": 35.0, "y": 15.0},
+        {"id": "F3-R303", "name": "303 研讨室", "type": "room", "x": 65.0, "y": 15.0},
+        {"id": "F3-R304", "name": "304 研讨室", "type": "room", "x": 85.0, "y": 15.0},
+        {"id": "F3-RESEARCH1", "name": "AI 研究实验室", "type": "room", "x": 15.0, "y": 48.0},
+        {"id": "F3-RESEARCH2", "name": "大数据实验室", "type": "room", "x": 40.0, "y": 48.0},
+        {"id": "F3-RESEARCH3", "name": "网络安全实验室", "type": "room", "x": 65.0, "y": 48.0},
+        {"id": "F3-SEMINAR", "name": "学术研讨室", "type": "room", "x": 85.0, "y": 48.0},
+        {"id": "F3-RESTROOM-W", "name": "西卫生间", "type": "poi", "x": 12.0, "y": 10.0},
+        {"id": "F3-RESTROOM-E", "name": "东卫生间", "type": "poi", "x": 88.0, "y": 10.0}
+      ],
+      "corridors": [
+        {"id": "F3-COR-H", "name": "主走廊(横)", "segments": [[10.0, 30.0], [30.0, 30.0], [50.0, 30.0], [70.0, 30.0], [90.0, 30.0]]},
+        {"id": "F3-COR-V-W", "name": "西走廊(竖)", "segments": [[18.0, 10.0], [18.0, 25.0], [18.0, 45.0], [18.0, 55.0]]},
+        {"id": "F3-COR-V-E", "name": "东走廊(竖)", "segments": [[82.0, 10.0], [82.0, 25.0], [82.0, 45.0], [82.0, 55.0]]}
+      ],
+      "edges": [
+        ["F3-COR-H-SEG0", "F3-COR-H-SEG1", 8.0],
+        ["F3-COR-H-SEG1", "F3-COR-H-SEG2", 8.0],
+        ["F3-COR-H-SEG2", "F3-COR-H-SEG3", 8.0],
+        ["F3-COR-H-SEG3", "F3-COR-H-SEG4", 8.0],
+        ["F3-COR-H-SEG0", "F3-COR-V-W-SEG1", 6.0],
+        ["F3-COR-H-SEG4", "F3-COR-V-E-SEG1", 6.0],
+        ["F3-COR-V-W-SEG0", "F3-COR-V-W-SEG1", 6.0],
+        ["F3-COR-V-W-SEG1", "F3-COR-V-W-SEG2", 8.0],
+        ["F3-COR-V-W-SEG2", "F3-COR-V-W-SEG3", 4.0],
+        ["F3-COR-V-E-SEG0", "F3-COR-V-E-SEG1", 6.0],
+        ["F3-COR-V-E-SEG1", "F3-COR-V-E-SEG2", 8.0],
+        ["F3-COR-V-E-SEG2", "F3-COR-V-E-SEG3", 4.0],
+        ["F3-COR-V-W-SEG0", "F3-R301", 2.0],
+        ["F3-COR-V-W-SEG0", "F3-R302", 4.0],
+        ["F3-COR-V-E-SEG0", "F3-R303", 4.0],
+        ["F3-COR-V-E-SEG0", "F3-R304", 2.0],
+        ["F3-COR-V-W-SEG3", "F3-RESEARCH1", 2.0],
+        ["F3-COR-V-W-SEG3", "F3-RESEARCH2", 4.0],
+        ["F3-COR-V-E-SEG3", "F3-RESEARCH3", 4.0],
+        ["F3-COR-V-E-SEG3", "F3-SEMINAR", 2.0],
+        ["F3-COR-V-W-SEG0", "F3-RESTROOM-W", 2.0],
+        ["F3-COR-V-E-SEG0", "F3-RESTROOM-E", 2.0],
+        ["F3-COR-H-SEG0", "F3-STAIR-A", 3.0],
+        ["F3-COR-H-SEG4", "F3-STAIR-B", 3.0],
+        ["F3-COR-H-SEG2", "F3-ELEV-1", 2.0]
+      ]
+    },
+    "4": {
+      "name": "四层 · 大会议室与图书区",
+      "rooms": [
+        {"id": "F4-CONF1", "name": "401 大报告厅", "type": "room", "x": 25.0, "y": 15.0},
+        {"id": "F4-CONF2", "name": "402 大报告厅", "type": "room", "x": 75.0, "y": 15.0},
+        {"id": "F4-MEET1", "name": "403 会议室", "type": "room", "x": 15.0, "y": 45.0},
+        {"id": "F4-MEET2", "name": "404 会议室", "type": "room", "x": 85.0, "y": 45.0},
+        {"id": "F4-LIBRARY", "name": "图书资料室", "type": "room", "x": 40.0, "y": 48.0},
+        {"id": "F4-ROOFTOP", "name": "天台入口", "type": "entrance", "x": 50.0, "y": 55.0},
+        {"id": "F4-LOUNGE", "name": "教师休息室", "type": "room", "x": 65.0, "y": 48.0},
+        {"id": "F4-RESTROOM-W", "name": "西卫生间", "type": "poi", "x": 12.0, "y": 10.0},
+        {"id": "F4-RESTROOM-E", "name": "东卫生间", "type": "poi", "x": 88.0, "y": 10.0}
+      ],
+      "corridors": [
+        {"id": "F4-COR-H", "name": "主走廊(横)", "segments": [[10.0, 30.0], [30.0, 30.0], [50.0, 30.0], [70.0, 30.0], [90.0, 30.0]]},
+        {"id": "F4-COR-V-W", "name": "西走廊(竖)", "segments": [[18.0, 10.0], [18.0, 25.0], [18.0, 45.0], [18.0, 55.0]]},
+        {"id": "F4-COR-V-E", "name": "东走廊(竖)", "segments": [[82.0, 10.0], [82.0, 25.0], [82.0, 45.0], [82.0, 55.0]]}
+      ],
+      "edges": [
+        ["F4-COR-H-SEG0", "F4-COR-H-SEG1", 8.0],
+        ["F4-COR-H-SEG1", "F4-COR-H-SEG2", 8.0],
+        ["F4-COR-H-SEG2", "F4-COR-H-SEG3", 8.0],
+        ["F4-COR-H-SEG3", "F4-COR-H-SEG4", 8.0],
+        ["F4-COR-H-SEG0", "F4-COR-V-W-SEG1", 6.0],
+        ["F4-COR-H-SEG4", "F4-COR-V-E-SEG1", 6.0],
+        ["F4-COR-V-W-SEG0", "F4-COR-V-W-SEG1", 6.0],
+        ["F4-COR-V-W-SEG1", "F4-COR-V-W-SEG2", 8.0],
+        ["F4-COR-V-W-SEG2", "F4-COR-V-W-SEG3", 4.0],
+        ["F4-COR-V-E-SEG0", "F4-COR-V-E-SEG1", 6.0],
+        ["F4-COR-V-E-SEG1", "F4-COR-V-E-SEG2", 8.0],
+        ["F4-COR-V-E-SEG2", "F4-COR-V-E-SEG3", 4.0],
+        ["F4-COR-V-W-SEG1", "F4-CONF1", 4.0],
+        ["F4-COR-V-E-SEG1", "F4-CONF2", 4.0],
+        ["F4-COR-V-W-SEG2", "F4-MEET1", 3.0],
+        ["F4-COR-V-E-SEG2", "F4-MEET2", 3.0],
+        ["F4-COR-V-W-SEG2", "F4-LIBRARY", 4.0],
+        ["F4-COR-V-E-SEG2", "F4-LOUNGE", 3.0],
+        ["F4-COR-H-SEG2", "F4-ROOFTOP", 4.0],
+        ["F4-COR-V-W-SEG0", "F4-RESTROOM-W", 2.0],
+        ["F4-COR-V-E-SEG0", "F4-RESTROOM-E", 2.0],
+        ["F4-COR-H-SEG0", "F4-STAIR-A", 3.0],
+        ["F4-COR-H-SEG4", "F4-STAIR-B", 3.0],
+        ["F4-COR-H-SEG2", "F4-ELEV-1", 2.0]
+      ]
+    }
+  },
+  "vertical_edges": [
+    ["F1-STAIR-A", "F2-STAIR-A", 6.0],
+    ["F2-STAIR-A", "F3-STAIR-A", 6.0],
+    ["F3-STAIR-A", "F4-STAIR-A", 6.0],
+    ["F1-STAIR-B", "F2-STAIR-B", 6.0],
+    ["F2-STAIR-B", "F3-STAIR-B", 6.0],
+    ["F3-STAIR-B", "F4-STAIR-B", 6.0],
+    ["F1-ELEV-1", "F2-ELEV-1", 2.0],
+    ["F2-ELEV-1", "F3-ELEV-1", 2.0],
+    ["F3-ELEV-1", "F4-ELEV-1", 2.0]
+  ]
+}
