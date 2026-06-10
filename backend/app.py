@@ -160,6 +160,7 @@ def api_find_path():
             start, goal,
             algorithm=algorithm,
             heuristic=heuristic,
+            record_steps=record_steps,
         )
 
         # Strip steps if not requested (reduce response size)

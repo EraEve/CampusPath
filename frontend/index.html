@@ -514,14 +514,19 @@ function switchView(view) {
     document.querySelectorAll('.header-nav button').forEach(b => b.classList.remove('active'));
     document.getElementById(`nav-${view}`).classList.add('active');
 
-    // Resize canvases when becoming visible
+    // Resize canvases when becoming visible (use rAF to ensure
+    // browser has completed layout after display change)
     if (view === 'animation') {
-        animRenderer._resize();
-        animRenderer.render();
+        requestAnimationFrame(() => {
+            animRenderer._resize();
+            animRenderer.render();
+        });
     }
     if (view === 'map') {
-        mapRenderer._resize();
-        mapRenderer.render();
+        requestAnimationFrame(() => {
+            mapRenderer._resize();
+            mapRenderer.render();
+        });
     }
 }
 
@@ -536,11 +541,19 @@ function animPlay() {
     const heuristic = document.getElementById('sel-heuristic').value;
 
     if (!animator.steps.length && start && goal) {
+        showToast('正在加载搜索步骤...');
         API.getAlgorithmSteps(algo, start, goal, heuristic).then(data => {
             animator.loadSteps(data.steps, data.path);
+            animRenderer._resize();
+            animRenderer.render();
             animator.play();
         }).catch(err => showToast(err.message));
+    } else if (!animator.steps.length) {
+        showToast('请先在地图视图中选择起终点并点击"查找路径"');
     } else {
+        // Ensure canvas is properly sized before playing
+        animRenderer._resize();
+        animRenderer.render();
         animator.play();
     }
 }

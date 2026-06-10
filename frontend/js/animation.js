@@ -26,12 +26,16 @@ class AlgorithmAnimator {
 
     /** Start auto-playback */
     play() {
-        if (this.steps.length === 0) return;
+        if (this.steps.length === 0) {
+            console.warn('No steps to play — find a path first.');
+            return false;
+        }
         if (this.currentStep >= this.steps.length - 1) {
             this.currentStep = -1;  // restart
         }
         this.isPlaying = true;
         this._scheduleNext();
+        return true;
     }
 
     /** Pause playback */

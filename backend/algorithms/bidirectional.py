@@ -103,23 +103,44 @@ def bidirectional_bfs(
 
     meeting_node: Optional[str] = None
     nodes_discovered = 0
+    steps: List[dict] = []
 
     while not fwd_queue.is_empty() and not bwd_queue.is_empty():
+        # Record pre-expansion state
+        if record_steps:
+            steps.append(_make_bi_step(
+                "fwd_level", "fwd",
+                list(fwd_parent.keys()), list(bwd_parent.keys()),
+                list(_bfs_queue_items(fwd_queue)),
+                list(_bfs_queue_items(bwd_queue)),
+            ))
+
         # Expand forward frontier by one level
-        meeting_node = _bfs_expand_one_level(
+        expanded_fwd = _bfs_expand_one_level(
             graph, fwd_queue, fwd_parent, bwd_parent,
             use_reverse=False, reverse_adj=reverse_adj,
         )
-        if meeting_node:
+        if expanded_fwd:
+            meeting_node = expanded_fwd
             nodes_discovered = len(fwd_parent) + len(bwd_parent)
             break
 
+        # Record pre-backward state
+        if record_steps:
+            steps.append(_make_bi_step(
+                "bwd_level", "bwd",
+                list(fwd_parent.keys()), list(bwd_parent.keys()),
+                list(_bfs_queue_items(fwd_queue)),
+                list(_bfs_queue_items(bwd_queue)),
+            ))
+
         # Expand backward frontier by one level
-        meeting_node = _bfs_expand_one_level(
+        expanded_bwd = _bfs_expand_one_level(
             graph, bwd_queue, bwd_parent, fwd_parent,
             use_reverse=True, reverse_adj=reverse_adj,
         )
-        if meeting_node:
+        if expanded_bwd:
+            meeting_node = expanded_bwd
             nodes_discovered = len(fwd_parent) + len(bwd_parent)
             break
 
@@ -141,7 +162,7 @@ def bidirectional_bfs(
         "total_distance": total_weight,
         "nodes_visited": nodes_discovered,
         "execution_time_ms": round((t_end - t_start) * 1000.0, 4),
-        "steps": [],
+        "steps": steps,
     }
 
 
@@ -262,6 +283,7 @@ def bidirectional_dijkstra(
 
     best_dist = INF
     meeting_node: Optional[str] = None
+    steps: List[dict] = []
 
     while not fwd_heap.is_empty() and not bwd_heap.is_empty():
         # Termination check: if min frontier priority sum >= best_dist
@@ -269,6 +291,17 @@ def bidirectional_dijkstra(
         bwd_min = bwd_heap._heap[1][0] if bwd_heap.size() > 0 else INF
         if fwd_min + bwd_min >= best_dist:
             break
+
+        # Record step before expansion
+        if record_steps:
+            steps.append(_make_bi_step(
+                _peek_heap_node(fwd_heap) or _peek_heap_node(bwd_heap) or "expand",
+                "fwd" if fwd_heap.size() <= bwd_heap.size() else "bwd",
+                list(fwd_closed) + list(bwd_closed),
+                [],
+                _heap_node_ids(fwd_heap),
+                _heap_node_ids(bwd_heap),
+            ))
 
         # Expand the side with smaller frontier
         if fwd_heap.size() <= bwd_heap.size():
@@ -310,7 +343,7 @@ def bidirectional_dijkstra(
         "total_distance": best_dist if best_dist < INF else INF,
         "nodes_visited": len(fwd_closed) + len(bwd_closed),
         "execution_time_ms": round((t_end - t_start) * 1000.0, 4),
-        "steps": [],
+        "steps": steps,
     }
 
 
@@ -357,6 +390,53 @@ def _dijkstra_expand_directed(
                 heap.decrease_key(neighbor_id, new_dist)
             else:
                 heap.push(new_dist, neighbor_id)
+
+
+# ---------------------------------------------------------------------------
+# Animation step helpers (shared by both bidirectional algorithms)
+# ---------------------------------------------------------------------------
+
+def _bfs_queue_items(queue: Queue) -> List[str]:
+    """Extract node IDs from a BFS queue for animation snapshots."""
+    items = []
+    for i in range(queue._head, len(queue._items)):
+        node_id = queue._items[i]
+        if node_id is not None:
+            items.append(node_id)
+    return items
+
+
+def _heap_node_ids(heap: MinHeap) -> List[str]:
+    """Extract all node IDs in the heap (excluding sentinel at index 0)."""
+    return [heap._heap[i][1] for i in range(1, len(heap._heap))]
+
+
+def _peek_heap_node(heap: MinHeap) -> Optional[str]:
+    """Peek at the top node ID in the heap without popping."""
+    if heap.size() > 0 and len(heap._heap) > 1:
+        return heap._heap[1][1]
+    return None
+
+
+def _make_bi_step(
+    current: str,
+    direction: str,
+    fwd_discovered: List[str],
+    bwd_discovered: List[str],
+    fwd_frontier: List[str],
+    bwd_frontier: List[str],
+) -> dict:
+    """Create a unified animation step for bidirectional search.
+
+    Merges both directions' state into a single step that the
+    AlgorithmAnimator can render on one floor map.
+    """
+    return {
+        "current": current,
+        "visited": fwd_discovered + bwd_discovered,
+        "frontier": fwd_frontier + bwd_frontier,
+        "direction": direction,  # extra metadata for future use
+    }
 
 
 # ---------------------------------------------------------------------------
