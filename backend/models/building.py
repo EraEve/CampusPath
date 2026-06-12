@@ -514,6 +514,265 @@ class Building:
 
         return issues
 
+    # ------------------------------------------------------------------
+    # Accessibility (wheelchair-friendly routing)
+    # ------------------------------------------------------------------
+
+    def find_accessible_path(
+        self,
+        start_id: str,
+        goal_id: str,
+        heuristic: str = "floor_aware",
+    ) -> Dict[str, Any]:
+        """Find a wheelchair-accessible path (elevator only, no stairs).
+
+        Strategy: temporarily remove all edges connected to STAIR nodes,
+        run A* with floor_aware heuristic, then restore the full graph.
+        Stairs are disabled because they represent vertical barriers for
+        wheelchair users.
+
+        Args:
+            start_id: Starting node ID.
+            goal_id: Target node ID.
+            heuristic: Heuristic for A* (default: floor_aware).
+
+        Returns:
+            Standardized result dict. If no accessible path exists,
+            returns {"path": [], "total_distance": inf, "nodes_visited": N}.
+        """
+        import copy
+
+        # Collect all stair node IDs
+        stair_ids = [
+            nid for nid, node in self.graph.vertices.items()
+            if node.node_type == NodeType.STAIR
+        ]
+
+        # Save and remove edges involving stairs
+        saved_edges: Dict[str, List[Tuple[str, float]]] = {}
+        for sid in stair_ids:
+            if sid in self.graph.adjacency:
+                saved_edges[sid] = list(self.graph.adjacency[sid])
+                # Remove edges from other nodes TO this stair
+                for neighbor, _ in saved_edges[sid]:
+                    if neighbor in self.graph.adjacency:
+                        self.graph.adjacency[neighbor] = [
+                            (n, w) for n, w in self.graph.adjacency[neighbor]
+                            if n != sid
+                        ]
+                # Remove edges FROM this stair
+                self.graph.adjacency[sid] = []
+
+        try:
+            result = a_star(
+                self.graph, start_id, goal_id, heuristic=heuristic
+            )
+        finally:
+            # Restore saved edges
+            for sid, edges in saved_edges.items():
+                self.graph.adjacency[sid] = edges
+                for neighbor, weight in edges:
+                    # Restore bidirectional edges
+                    if neighbor in self.graph.adjacency:
+                        existing = [
+                            (n, w) for n, w in self.graph.adjacency[neighbor]
+                            if n != sid
+                        ]
+                        existing.append((sid, weight))
+                        self.graph.adjacency[neighbor] = existing
+
+        # Tag the result
+        result["accessible"] = (
+            result["total_distance"] < float("inf")
+            and len(result["path"]) > 0
+        )
+        return result
+
+    # ------------------------------------------------------------------
+    # Graph statistics
+    # ------------------------------------------------------------------
+
+    def get_graph_stats(self) -> Dict[str, Any]:
+        """Return comprehensive graph statistics for the building.
+
+        Returns:
+            {
+                "total_nodes": int,
+                "total_edges": int,
+                "floors": [int, ...],
+                "nodes_per_floor": {floor: int, ...},
+                "avg_degree": float,
+                "max_degree": int,
+                "min_degree": int,
+                "degree_distribution": {degree: count, ...},
+                "longest_edge": float,
+                "shortest_edge": float,
+                "edge_weight_avg": float,
+                "node_types": {type_name: count, ...},
+                "connectivity_score": float (0-1, isolated nodes → 0),
+            }
+        """
+        stats: Dict[str, Any] = {
+            "total_nodes": self.graph.total_vertices,
+            "total_edges": self.graph.total_edges,
+            "floors": self.floors,
+            "nodes_per_floor": {},
+            "avg_degree": 0.0,
+            "max_degree": 0,
+            "min_degree": float("inf"),
+            "degree_distribution": {},
+            "longest_edge": 0.0,
+            "shortest_edge": float("inf"),
+            "edge_weight_avg": 0.0,
+            "node_types": {},
+            "connectivity_score": 0.0,
+        }
+
+        # Nodes per floor
+        for floor in self.floors:
+            stats["nodes_per_floor"][str(floor)] = len(
+                self.graph.get_nodes_by_floor(floor)
+            )
+
+        # Node types
+        for nid, node in self.graph.vertices.items():
+            t = node.node_type.value
+            stats["node_types"][t] = stats["node_types"].get(t, 0) + 1
+
+        # Degree statistics
+        degrees = []
+        for nid in self.graph:
+            deg = len(self.graph.get_neighbors(nid))
+            degrees.append(deg)
+            stats["degree_distribution"][str(deg)] = (
+                stats["degree_distribution"].get(str(deg), 0) + 1
+            )
+
+        if degrees:
+            stats["max_degree"] = max(degrees)
+            stats["min_degree"] = min(degrees)
+            stats["avg_degree"] = round(sum(degrees) / len(degrees), 2)
+
+        # Edge weight statistics
+        weights = []
+        seen = set()
+        for from_id, neighbors in self.graph.adjacency.items():
+            for to_id, weight in neighbors:
+                key = tuple(sorted([from_id, to_id]))
+                if key not in seen:
+                    seen.add(key)
+                    weights.append(weight)
+
+        if weights:
+            stats["longest_edge"] = round(max(weights), 2)
+            stats["shortest_edge"] = round(min(weights), 2)
+            stats["edge_weight_avg"] = round(
+                sum(weights) / len(weights), 2
+            )
+
+        # Connectivity score: % of nodes that are NOT isolated
+        isolated = sum(
+            1 for nid in self.graph
+            if len(self.graph.get_neighbors(nid)) == 0
+        )
+        total = stats["total_nodes"]
+        stats["connectivity_score"] = round(
+            (total - isolated) / total, 3
+        ) if total > 0 else 0.0
+
+        return stats
+
+    # ------------------------------------------------------------------
+    # Turn-by-turn directions
+    # ------------------------------------------------------------------
+
+    def generate_directions(self, path_nodes: List[str]) -> List[Dict[str, Any]]:
+        """Generate turn-by-turn text directions from a path node list.
+
+        Each direction step includes:
+            - instruction: Natural language direction.
+            - from_node: Starting node ID + name.
+            - to_node: Ending node ID + name.
+            - distance: Edge distance (m).
+            - action: "walk" | "take_elevator" | "take_stairs" | "arrive".
+
+        Args:
+            path_nodes: Ordered list of node IDs on the path.
+
+        Returns:
+            List of direction steps (empty if path has < 2 nodes).
+        """
+        if len(path_nodes) < 2:
+            return []
+
+        directions = []
+        for i in range(len(path_nodes) - 1):
+            current_id = path_nodes[i]
+            next_id = path_nodes[i + 1]
+
+            current = self.graph.vertices.get(current_id)
+            next_node = self.graph.vertices.get(next_id)
+
+            # Find edge weight
+            dist = 0.0
+            neighbors = self.graph.get_neighbors(current_id)
+            for nid, w in neighbors:
+                if nid == next_id:
+                    dist = round(w, 1)
+                    break
+
+            # Determine action type
+            if current and next_node:
+                if current.floor != next_node.floor:
+                    if next_node.node_type == NodeType.ELEVATOR:
+                        action = "take_elevator"
+                    elif next_node.node_type == NodeType.STAIR:
+                        action = "take_stairs"
+                    else:
+                        action = "walk"
+                else:
+                    action = "walk"
+            else:
+                action = "walk"
+
+            # Build natural language instruction
+            if action == "take_elevator":
+                instruction = (
+                    f"乘电梯从 {current.floor}F → {next_node.floor}F "
+                    f"({current.name} → {next_node.name})"
+                )
+            elif action == "take_stairs":
+                instruction = (
+                    f"走楼梯从 {current.floor}F → {next_node.floor}F "
+                    f"({current.name} → {next_node.name})"
+                )
+            elif i == len(path_nodes) - 2:
+                instruction = f"到达目的地: {next_node.name}"
+                action = "arrive"
+            elif dist > 0:
+                instruction = (
+                    f"沿走廊步行 {dist:.0f}m → {next_node.name}"
+                )
+            else:
+                instruction = f"前往 {next_node.name}"
+
+            directions.append({
+                "step": i + 1,
+                "instruction": instruction,
+                "from_node": {
+                    "id": current_id,
+                    "name": current.name if current else current_id,
+                },
+                "to_node": {
+                    "id": next_id,
+                    "name": next_node.name if next_node else next_id,
+                },
+                "distance_m": dist,
+                "action": action,
+            })
+
+        return directions
+
     def __repr__(self) -> str:
         return (f"Building(name={self.name!r}, floors={self.floors}, "
                 f"vertices={self.graph.total_vertices}, "
