@@ -1,41 +1,73 @@
 """Traffic Simulator — generates periodic congestion/blockage events.
 
-Uses tkinter's `after()` timer to periodically modify congestion levels
-and create blockage events on random edges, simulating real-time traffic
-conditions for demonstration purposes.
+Uses a generic timer callback interface to periodically modify congestion
+levels and create blockage events on random edges, simulating real-time
+traffic conditions for demonstration purposes.
+
+Timer interface (framework-agnostic):
+    schedule_timer(ms, callback) -> token
+    cancel_timer(token) -> None
+
+Backward compatible: if ``root`` has an ``after`` method (tkinter), it is
+auto-adapted.  For wxPython, pass ``schedule_timer`` / ``cancel_timer``.
 """
 
 import random
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 from ..core.graph import NavGraph
 from ..models.traffic import CongestionLevel
 from ..services.traffic_service import TrafficService
 
+# Sentinel for "no timer set"
+_NO_TIMER = object()
+
 
 class TrafficSimulator:
     """Periodic traffic event generator for real-time demonstrations.
 
-    Usage:
+    Usage (tkinter — backward compatible):
         sim = TrafficSimulator(root, graph, traffic_service)
-        sim.start(interval_ms=3000)   # update every 3 seconds
-        sim.stop()
+        sim.start(interval_ms=3000)
+
+    Usage (wxPython / generic):
+        sim = TrafficSimulator(
+            graph, traffic_service,
+            schedule_timer=wx_frame.schedule_timer,
+            cancel_timer=wx_frame.cancel_timer,
+        )
+        sim.start(interval_ms=3000)
     """
 
     def __init__(
         self,
-        root,  # tkinter.Tk
         graph: NavGraph,
         traffic_service: TrafficService,
         on_update: Optional[Callable] = None,
+        schedule_timer: Optional[Callable[[int, Callable], Any]] = None,
+        cancel_timer: Optional[Callable[[Any], None]] = None,
+        root=None,  # tkinter backward compat
     ):
-        self._root = root
         self._graph = graph
         self._traffic = traffic_service
         self._on_update = on_update
         self._running = False
-        self._timer_id: Optional[str] = None
+        self._timer_token: Any = _NO_TIMER
         self._interval_ms = 3000
+
+        # Resolve timer interface — prefer explicit callbacks, fall back to
+        # tkinter root.after / root.after_cancel.
+        if schedule_timer is not None and cancel_timer is not None:
+            self._schedule_timer = schedule_timer
+            self._cancel_timer = cancel_timer
+        elif root is not None and hasattr(root, "after"):
+            self._schedule_timer = lambda ms, cb: root.after(ms, cb)
+            self._cancel_timer = lambda tok: root.after_cancel(tok)
+        else:
+            raise ValueError(
+                "TrafficSimulator requires either (schedule_timer + cancel_timer) "
+                "or a tkinter root with after()/after_cancel()."
+            )
 
         # Collect all edge keys for random selection
         self._edge_keys: List[tuple] = []
@@ -66,9 +98,9 @@ class TrafficSimulator:
     def stop(self):
         """Stop generating traffic events."""
         self._running = False
-        if self._timer_id:
-            self._root.after_cancel(self._timer_id)
-            self._timer_id = None
+        if self._timer_token is not _NO_TIMER:
+            self._cancel_timer(self._timer_token)
+            self._timer_token = _NO_TIMER
 
     def is_running(self) -> bool:
         """Return True if the simulator is active."""
@@ -82,7 +114,7 @@ class TrafficSimulator:
         """Schedule the next traffic event."""
         if not self._running:
             return
-        self._timer_id = self._root.after(self._interval_ms, self._tick)
+        self._timer_token = self._schedule_timer(self._interval_ms, self._tick)
 
     def _tick(self):
         """Generate one round of traffic events."""

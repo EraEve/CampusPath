@@ -16,7 +16,7 @@ def main():
     from .services.traffic_service import TrafficService
     from .services.vehicle_service import VehicleService
     from .services.navigation_service import NavigationService
-    from .gui.app_window import AppWindow
+    from .gui_wx.app_window import AppWindow
 
     # Initialize services
     map_manager = MapManager()
