@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .min_heap import MinHeap
 from .queue_stack import Queue, Stack
-from ..models.graph import AdjacencyListGraph
+from backend.models.graph import AdjacencyListGraph
 
 
 INF = float("inf")

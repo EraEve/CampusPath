@@ -1,50 +1,44 @@
-"""Breadth-First Search for unweighted shortest paths.
+"""Breadth-First Search — extended with mode filtering.
 
-BFS finds the path with the fewest edges between start and goal.
-It ignores edge weights, treating every edge as cost 1.
+Finds the path with the fewest edges. Now supports transport mode filtering
+so BFS respects road-type restrictions.
 
-This serves as the BASELINE for algorithm comparison:
-- On unweighted graphs, BFS is optimal (minimum edges).
-- On weighted graphs, BFS may find a suboptimal path (more edges
-  but shorter total distance). This contrast demonstrates WHY
-  weighted algorithms (Dijkstra, A*) are necessary for realistic
-  building navigation where corridors have different lengths.
-
-Uses the hand-built Queue ADT (FIFO) and Stack (LIFO) for path
-reconstruction — all core data structures are custom.
+Ported from CampusPath and extended with mode/congestion awareness.
 """
 
 import time
 from typing import Any, Dict, List, Optional, Set
 
-from .queue_stack import Queue, Stack
-from backend.models.graph import AdjacencyListGraph
-
+from backend.core.nav_graph import NavGraph
+from backend.core.queue_stack import Queue, Stack
+from backend.models.transport import TransportMode
 
 INF = float("inf")
 
 
 def bfs_shortest_path(
-    graph: AdjacencyListGraph,
+    graph: NavGraph,
     start_id: str,
     goal_id: str,
+    transport_mode: TransportMode = TransportMode.WALKING,
     record_steps: bool = False,
+    blocked_edges: Optional[Set] = None,
 ) -> Dict[str, Any]:
     """Find the path with the fewest edges using BFS.
 
-    Note: This is an UNWEIGHTED search. Edge weights are ignored.
-    Use Dijkstra or A* for weighted shortest paths.
+    This is an UNWEIGHTED search. Edge weights are ignored for the search
+    but summed for the reported total_distance (for fair comparison).
 
     Args:
-        graph: The building graph.
+        graph: The navigation graph.
         start_id: Starting node ID.
         goal_id: Target node ID.
-        record_steps: If True, record per-step state for animation.
+        transport_mode: Filter edges by allowed transport mode.
+        record_steps: If True, record per-step state.
+        blocked_edges: Optional set of (from_id, to_id) to treat as blocked.
 
     Returns:
         Standardized result dict.
-        total_distance here is the SUM OF ACTUAL EDGE WEIGHTS along
-        the BFS path (for fair comparison), NOT the number of edges.
     """
     t_start = time.perf_counter()
 
@@ -53,12 +47,9 @@ def bfs_shortest_path(
     if not graph.has_node(goal_id):
         raise KeyError(f"Goal node '{goal_id}' not in graph.")
 
-    # ------------------------------------------------------------------
-    # Data structures:
-    # - queue: Queue (FIFO)       → frontier, ordered by discovery time
-    # - prev: HashMap<str, str>   → predecessor for path reconstruction
-    # - visited: Set<str>         → nodes already discovered/expanded
-    # ------------------------------------------------------------------
+    if blocked_edges is None:
+        blocked_edges = set()
+
     queue = Queue()
     prev: Dict[str, Optional[str]] = {}
     visited: Set[str] = set()
@@ -80,37 +71,34 @@ def bfs_shortest_path(
 
         nodes_visited += 1
 
-        # Goal check at expansion time
         if current_id == goal_id:
             reached = True
             break
 
-        # Record step
         if record_steps:
-            frontier = []
-            # Build frontier snapshot (approximate from queue internals)
-            for i in range(queue._head, len(queue._items)):
-                frontier.append(queue._items[i])
+            frontier = [queue._items[i] for i in range(queue._head, len(queue._items))]
             steps.append({
                 "current": current_id,
                 "frontier": frontier,
                 "visited": list(visited),
             })
 
-        for neighbor_id, _weight in graph.get_neighbors(current_id):
+        for edge in graph.get_edges_for_mode(current_id, transport_mode, skip_blocked=True):
+            neighbor_id = edge.to_id
             if neighbor_id not in visited:
+                if (current_id, neighbor_id) in blocked_edges:
+                    continue
                 visited.add(neighbor_id)
                 prev[neighbor_id] = current_id
                 queue.enqueue(neighbor_id)
 
-    # Reconstruct path
     path = _reconstruct_path(prev, start_id, goal_id, reached)
 
     # Compute actual weighted distance along the BFS path
     total_weight = 0.0
     for i in range(len(path) - 1):
         w = graph.get_weight(path[i], path[i + 1])
-        total_weight += w if w >= 0 else 0.0
+        total_weight += w if w < INF else 0.0
 
     t_end = time.perf_counter()
 

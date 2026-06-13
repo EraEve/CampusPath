@@ -22,10 +22,10 @@ from .node import Node, NodeType
 from .graph import AdjacencyListGraph
 
 # Algorithm imports (lazy to avoid early loading issues)
-from ..algorithms.dijkstra import dijkstra
-from ..algorithms.a_star import a_star, HEURISTICS
-from ..algorithms.bfs import bfs_shortest_path
-from ..algorithms.bidirectional import bidirectional_bfs, bidirectional_dijkstra
+from algorithms.dijkstra import dijkstra
+from algorithms.a_star import a_star, HEURISTICS
+from algorithms.bfs import bfs_shortest_path
+from algorithms.bidirectional import bidirectional_bfs, bidirectional_dijkstra
 
 
 class Building:
