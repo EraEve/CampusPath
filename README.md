@@ -36,10 +36,10 @@ python backend/app.py                 # http://localhost:5001
 | 算法基准 | 批量对比 (10 场景)、Chart.js 图表、汇总统计 |
 | 无障碍通道 | 轮椅模式、电梯等待时间模拟、绿色路径 |
 | 系统诊断 | 图验证、度分布直方图、孤立节点检测 |
-| 智慧导航 | 4 地图场景、8 算法、POI 搜索、实时交通、车辆监管、SSE 流 |
+| 智慧导航 | 4 地图场景、8 算法、POI 搜索、实时交通、车辆监管、SSE 流、缩放平移、楼层切换、图例 |
 | 关于系统 | 技术栈、项目信息 |
 
-### Web API 端点 (56 total)
+### Web API 端点 (57 total)
 
 **Campus Core (22 endpoints):**
 | Method | Endpoint | Purpose |
@@ -63,13 +63,14 @@ python backend/app.py                 # http://localhost:5001
 | GET/POST | `/api/recent` | 最近搜索历史 |
 | GET | `/api/meta/algorithms` | 算法元数据 |
 
-**SmartNav (34 endpoints + SSE):**
+**SmartNav (35 endpoints + SSE):**
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | GET | `/api/smart/scenes` | 列出所有场景 |
 | GET | `/api/smart/scenes/<id>` | 场景详情 |
 | POST | `/api/smart/scenes/<id>/activate` | 激活场景 |
 | GET | `/api/smart/scenes/<id>/stats` | 场景统计 |
+| GET | `/api/smart/health` | 🆕 诊断健康检查 |
 | POST | `/api/smart/path` | 路径规划 (多模式) |
 | POST | `/api/smart/compare` | 全算法对比 |
 | POST | `/api/smart/path/waypoints` | 途经点路径 |
@@ -130,7 +131,7 @@ python desktop/run.py                 # 启动桌面 GUI
 智慧导航/
 ├── backend/                       # Web 后端 (Flask API)
 │   ├── app.py                     # Flask 应用 (22 端点, 端口 5001)
-│   ├── routes_smart.py            # SmartNav API (34 端点 + SSE)
+│   ├── routes_smart.py            # SmartNav API (35 端点 + SSE + health)
 │   ├── algorithms/                # 路径算法 (13 文件含扩展)
 │   │   ├── dijkstra.py            # Dijkstra
 │   │   ├── a_star.py              # A* (3 启发式)
@@ -250,3 +251,18 @@ python -m pytest backend/tests/ desktop/tests/ -v
 ## 技术栈
 
 Python 3.x · Flask · HTML5 Canvas · wxPython · pytest · LaTeX · Chart.js
+
+## 🆕 SmartNav 全面升级 (2026-06-14)
+
+智慧导航页面 Phases A-F 全部完成:
+
+| Phase | 内容 | 文件 |
+|-------|------|------|
+| A | 后端鲁棒性: `_init_all()` try/except, `GET /api/smart/health` 诊断端点, `file://` 检测 | `routes_smart.py`, `index.html` |
+| B | 渲染质量: 14 种节点类型全覆盖颜色+发光, 8 种道路类型着色, 背景网格 | `index.html` |
+| C | 标签碰撞避免: 优先级排序+贪婪放置, start/goal 始终可见 | `index.html` |
+| D | 缩放/平移: 鼠标中心缩放 (0.3x-4x), 拖拽平移, 点击区分, 重置按钮 | `index.html` |
+| E | 楼层处理: 多楼层自动提取, 楼层切换按钮, "全部"视图垂直偏移 | `index.html` |
+| F | 响应式: Canvas `65vh`, 可折叠图例覆盖层, 缩放指示器 | `index.html` |
+
+**验证**: 105/105 tests pass · health status=ok · 4 scenes loaded

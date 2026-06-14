@@ -280,6 +280,52 @@ body{
   pointer-events:none;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.5);
   white-space:nowrap;display:none;
 }
+
+/* ---- Floor buttons (Phase E) ---- */
+.floor-btns{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  display:flex;gap:4px;z-index:50;background:rgba(15,23,42,0.85);
+  padding:4px 8px;border-radius:20px;border:1px solid var(--border-subtle);
+}
+.floor-btns .btn-xs{padding:2px 8px;font-size:10px;border-radius:12px}
+
+/* ---- Zoom reset button (Phase D5) ---- */
+.zoom-reset-btn{
+  position:absolute;bottom:12px;right:12px;z-index:50;
+  background:rgba(15,23,42,0.8);border:1px solid var(--border-subtle);
+  color:#94a3b8;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;transition:all 0.2s;
+}
+.zoom-reset-btn:hover{color:#e2e8f0;border-color:var(--accent);background:rgba(8,145,178,0.2)}
+
+/* ---- Legend toggle button (Phase F2) ---- */
+.legend-toggle-btn{
+  position:absolute;top:12px;right:12px;z-index:50;
+  background:rgba(15,23,42,0.8);border:1px solid var(--border-subtle);
+  color:#94a3b8;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;transition:all 0.2s;
+}
+.legend-toggle-btn:hover{color:#e2e8f0;border-color:var(--accent);background:rgba(8,145,178,0.2)}
+
+/* ---- Legend overlay (Phase F2) ---- */
+.legend-overlay{
+  position:absolute;top:50px;right:12px;z-index:99;
+  background:rgba(15,23,42,0.95);border:1px solid var(--border-glow);
+  border-radius:12px;padding:10px 14px;min-width:180px;
+  font-size:11px;color:var(--text-primary);box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+.legend-title{
+  font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;
+}
+.legend-close{background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 4px;font-size:14px}
+.legend-section{margin-bottom:6px}
+.legend-section b{font-size:10px;color:var(--text-secondary);display:block;margin-bottom:2px}
+.legend-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-line{width:24px;border-radius:1px;flex-shrink:0}
 .floor-tab.all-floors{padding:0 12px;width:auto;font-size:11px}
 
 /* ---- Quick Action ---- */
@@ -1453,9 +1499,18 @@ class SmartNavRenderer{
     this.scaleX=1;this.scaleY=1;this.offsetX=0;this.offsetY=0;
     this.minX=0;this.minY=0;this.maxX=1000;this.maxY=600;
     this.hoveredNode=null;this.tooltipEl=null;
+    // Zoom/Pan state (Phase D)
+    this.zoom=1;this.panX=0;this.panY=0;
+    this.minZoom=0.3;this.maxZoom=4;
+    this._dragStartX=0;this._dragStartY=0;this._isDragging=false;this._dragMoved=false;
+    // Floor state (Phase E)
+    this.activeFloor=null;this.floors=[];
     // Vehicle animation
     this._vehAnim={prev:{},target:{},smoothed:{},animId:null,lastTime:0,active:false};
+    // Label collision tracking (Phase C)
+    this._placedLabels=[];
     this._resize();window.addEventListener('resize',()=>this._resize());
+    this._bindZoomPan();
   }
   _resize(){
     var dpr=window.devicePixelRatio||1;
@@ -1464,9 +1519,61 @@ class SmartNavRenderer{
     this.ctx.setTransform(dpr,0,0,dpr,0,0);
     this.viewW=rect.width;this.viewH=rect.height;
   }
+
+  // ── Zoom/Pan binding (Phase D) ──
+  _bindZoomPan(){
+    var self=this;
+    this.canvas.addEventListener('wheel',function(e){e.preventDefault();self._onWheel(e)});
+    this.canvas.addEventListener('mousedown',function(e){self._onMouseDown(e)});
+    this.canvas.addEventListener('mousemove',function(e){self._onMouseMove(e)});
+    this.canvas.addEventListener('mouseup',function(e){self._onMouseUp(e)});
+    this.canvas.addEventListener('mouseleave',function(e){self._isDragging=false});
+  }
+  _onWheel(e){
+    var rect=this.canvas.getBoundingClientRect();
+    var mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    var oldZoom=this.zoom;
+    var delta=e.deltaY>0?-0.12:0.12;
+    this.zoom=Math.max(this.minZoom,Math.min(this.maxZoom,this.zoom+delta));
+    // Zoom toward mouse position
+    var ratio=this.zoom/oldZoom;
+    this.panX=mx-(mx-this.panX)*ratio;
+    this.panY=my-(my-this.panY)*ratio;
+    this.render();
+  }
+  _onMouseDown(e){
+    this._dragStartX=e.clientX;this._dragStartY=e.clientY;
+    this._isDragging=true;this._dragMoved=false;
+  }
+  _onMouseMove(e){
+    if(!this._isDragging)return;
+    var dx=e.clientX-this._dragStartX,dy=e.clientY-this._dragStartY;
+    if(Math.abs(dx)>2||Math.abs(dy)>2)this._dragMoved=true;
+    this.panX+=dx;this.panY+=dy;
+    this._dragStartX=e.clientX;this._dragStartY=e.clientY;
+    this.render();
+  }
+  _onMouseUp(e){
+    this._isDragging=false;
+    // Delegate clicks (not drags) to external handler via custom event
+    if(!this._dragMoved){
+      var rect=this.canvas.getBoundingClientRect();
+      var nid=this.hitTest(e.clientX,e.clientY);
+      if(nid)this.canvas.dispatchEvent(new CustomEvent('node-click',{detail:{nodeId:nid}}));
+    }
+  }
+
+  // ── Scene loading ──
   loadScene(nodes,edges){
     this.nodes=nodes||[];this.edges=edges||[];this.nodeMap={};
     for(var i=0;i<this.nodes.length;i++)this.nodeMap[this.nodes[i].node_id]=this.nodes[i];
+    // Extract floors (Phase E)
+    var floorSet={};
+    for(var i=0;i<this.nodes.length;i++){
+      var f=this.nodes[i].floor;if(f!==undefined&&f!==null)floorSet[f]=true;
+    }
+    this.floors=Object.keys(floorSet).map(Number).sort(function(a,b){return a-b});
+    this.activeFloor=null; // default: show all
     // Compute bounds
     if(this.nodes.length>0){
       this.minX=Infinity;this.minY=Infinity;this.maxX=-Infinity;this.maxY=-Infinity;
@@ -1479,13 +1586,54 @@ class SmartNavRenderer{
       this.scaleX=(this.viewW-pad*2)/(this.maxX-this.minX||1);
       this.scaleY=(this.viewH-pad*2)/(this.maxY-this.minY||1);
     }
+    // Reset zoom/pan
+    this.zoom=1;this.panX=0;this.panY=0;
+    // Update floor buttons
+    this._updateFloorButtons();
     this.render();
   }
-  _toPixel(nx,ny){return{x:(nx-this.minX)*this.scaleX+this.offsetX,y:(ny-this.minY)*this.scaleY+this.offsetY}}
+
+  // ── Coordinate transform with zoom/pan (Phase D) ──
+  _toPixel(nx,ny){
+    var sx=(nx-this.minX)*this.scaleX+this.offsetX;
+    var sy=(ny-this.minY)*this.scaleY+this.offsetY;
+    return {
+      x:(sx-this.viewW/2)*this.zoom+this.viewW/2+this.panX,
+      y:(sy-this.viewH/2)*this.zoom+this.viewH/2+this.panY
+    };
+  }
+
+  // ── Floor filtering (Phase E) ──
+  _getVisibleNodes(){
+    var self=this;
+    if(this.activeFloor===null||this.activeFloor===undefined)return this.nodes;
+    return this.nodes.filter(function(n){return n.floor===self.activeFloor});
+  }
+  _getVisibleEdges(){
+    var self=this;
+    if(this.activeFloor===null||this.activeFloor===undefined)return this.edges;
+    var visibleNodeIds={};
+    var vn=this._getVisibleNodes();
+    for(var i=0;i<vn.length;i++)visibleNodeIds[vn[i].node_id]=true;
+    return this.edges.filter(function(e){return visibleNodeIds[e.from]&&visibleNodeIds[e.to]});
+  }
+  _getFloorOffsetY(floor){
+    // In "all floors" mode, offset each floor vertically to avoid overlap (Phase E4)
+    if(this.activeFloor!==null||this.floors.length<=1)return 0;
+    var idx=this.floors.indexOf(floor);
+    if(idx<0)return 0;
+    // Spread floors vertically with 200px offset per floor
+    return (idx-Math.floor(this.floors.length/2))*200;
+  }
+  switchFloor(floor){
+    this.activeFloor=(floor===undefined||floor===null)?null:floor;
+    this.render();
+  }
+
+  // ── State setters ──
   setState(state,path){this.state=state||{};this.highlightPath=path||[];this.render()}
   setVehicles(vehicles){
     var a=this._vehAnim;
-    // Save current smoothed positions as previous for interpolation
     for(var i=0;i<vehicles.length;i++){
       var v=vehicles[i],vid=v.vehicle_id;
       a.target[vid]={x:v.x,y:v.y,name:v.name,vehicle_id:vid,
@@ -1494,7 +1642,6 @@ class SmartNavRenderer{
       if(!a.smoothed[vid])a.smoothed[vid]={x:v.x,y:v.y};
       a.prev[vid]={x:a.smoothed[vid].x,y:a.smoothed[vid].y};
     }
-    // Clean up vehicles no longer present
     var keep={};
     for(var i=0;i<vehicles.length;i++)keep[vehicles[i].vehicle_id]=true;
     for(var k in a.prev)if(!keep[k]){delete a.prev[k];delete a.target[k];delete a.smoothed[k]}
@@ -1503,62 +1650,200 @@ class SmartNavRenderer{
     else if(a.animId){cancelAnimationFrame(a.animId);a.animId=null;a.active=false}
   }
   setTraffic(trafficData){this.trafficData=trafficData||{};this.render()}
+
+  // ── Main render ──
   render(){
     var ctx=this.ctx;ctx.clearRect(0,0,this.viewW,this.viewH);
-    this._drawEdges();this._drawPathHighlight();this._drawNodes();this._drawVehicles();
+    this._placedLabels=[]; // reset collision list
+    this._drawGrid();
+    this._drawEdges();
+    this._drawPathHighlight();
+    this._drawNodes();
+    this._drawVehicles();
+    this._drawZoomIndicator();
   }
+
+  // ── B5: Background grid ──
+  _drawGrid(){
+    var ctx=this.ctx,step=50;
+    ctx.strokeStyle='rgba(148,163,184,0.06)';ctx.lineWidth=0.5;
+    ctx.beginPath();
+    for(var x=0;x<this.viewW;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,this.viewH)}
+    for(var y=0;y<this.viewH;y+=step){ctx.moveTo(0,y);ctx.lineTo(this.viewW,y)}
+    ctx.stroke();
+  }
+
+  // ── B4: Edges colored by road_type ──
   _drawEdges(){
-    var ctx=this.ctx;ctx.lineWidth=1.5;
-    for(var i=0;i<this.edges.length;i++){
-      var e=this.edges[i],p1=this._toPixel(this.nodeMap[e.from]?.x||0,this.nodeMap[e.from]?.y||0),p2=this._toPixel(this.nodeMap[e.to]?.x||0,this.nodeMap[e.to]?.y||0);
-      if(!this.nodeMap[e.from]||!this.nodeMap[e.to])continue;
-      // Check traffic
+    var ctx=this.ctx;
+    // Road type → color+width+dash mapping (B4)
+    var roadStyles={
+      highway:{color:'rgba(239,68,68,0.45)',width:2.5,dash:[]},
+      main_road:{color:'rgba(148,163,184,0.4)',width:2,dash:[]},
+      one_way_street:{color:'rgba(59,130,246,0.4)',width:1.8,dash:[]},
+      bus_lane:{color:'rgba(6,182,212,0.45)',width:1.8,dash:[6,4]},
+      subway_tunnel:{color:'rgba(139,92,246,0.45)',width:2,dash:[8,4]},
+      train_track:{color:'rgba(217,119,6,0.45)',width:2.5,dash:[10,5]},
+      walking_path:{color:'rgba(34,197,94,0.35)',width:1.5,dash:[]},
+      path:{color:'rgba(148,163,184,0.2)',width:1.2,dash:[]}
+    };
+    var visEdges=this._getVisibleEdges();
+    for(var i=0;i<visEdges.length;i++){
+      var e=visEdges[i];
+      var n1=this.nodeMap[e.from],n2=this.nodeMap[e.to];
+      if(!n1||!n2)continue;
+      var floorOffset1=this._getFloorOffsetY(n1.floor);
+      var floorOffset2=this._getFloorOffsetY(n2.floor);
+      var p1=this._toPixel(n1.x,n1.y+floorOffset1);
+      var p2=this._toPixel(n2.x,n2.y+floorOffset2);
+      // Traffic state overrides
       var isBlocked=false,isCongested=false;
       if(this.trafficData){
-        var key=e.from+'→'+e.to;
-        if(this.trafficData.blockages){for(var b=0;b<this.trafficData.blockages.length;b++){if(this.trafficData.blockages[b].edge===key){isBlocked=true;break}}}
+        if(this.trafficData.blockages){for(var b=0;b<this.trafficData.blockages.length;b++){if(this.trafficData.blockages[b].from===e.from&&this.trafficData.blockages[b].to===e.to){isBlocked=true;break}}}
         if(this.trafficData.congested_details){for(var c=0;c<this.trafficData.congested_details.length;c++){if(this.trafficData.congested_details[c].from===e.from&&this.trafficData.congested_details[c].to===e.to){isCongested=true;break}}}
       }
       if(isBlocked){ctx.strokeStyle='rgba(239,68,68,0.6)';ctx.lineWidth=3;ctx.setLineDash([6,4])}
-      else if(isCongested){ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=2;ctx.setLineDash([])}
-      else{ctx.strokeStyle='rgba(148,163,184,0.2)';ctx.lineWidth=1.5;ctx.setLineDash([])}
+      else if(isCongested){ctx.strokeStyle='rgba(245,158,11,0.55)';ctx.lineWidth=2.5;ctx.setLineDash([])}
+      else{
+        var rs=roadStyles[e.road_type]||roadStyles.path;
+        ctx.strokeStyle=rs.color;ctx.lineWidth=rs.width;ctx.setLineDash(rs.dash);
+      }
       ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
     }
     ctx.setLineDash([]);
   }
+
+  // ── B1-B3: Nodes with full type colors, size hierarchy, glow ──
   _drawNodes(){
     var ctx=this.ctx;
-    var typeColors={entrance:'rgba(239,68,68,0.4)',road:'rgba(148,163,184,0.3)',intersection:'rgba(148,163,184,0.35)',
-      poi:'rgba(245,158,11,0.4)',food:'rgba(16,185,129,0.35)',parking:'rgba(59,130,246,0.35)',
-      station:'rgba(168,85,247,0.35)',scenic:'rgba(236,72,153,0.35)',default:'rgba(148,163,184,0.3)'};
-    for(var i=0;i<this.nodes.length;i++){
-      var n=this.nodes[i],p=this._toPixel(n.x,n.y),r=8;
-      var state=this.state[n.node_id]||'normal',isStart=state==='start',isGoal=state==='goal';
-      var cl=typeColors[n.type]||typeColors.default;
-      // Draw node
-      ctx.fillStyle=cl;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='rgba(148,163,184,0.25)';ctx.lineWidth=1;ctx.stroke();
+    // Full 14-type color map with fill+glow pairs (B1)
+    var typeColors={
+      entrance:{fill:'rgba(239,68,68,0.7)',glow:'rgba(239,68,68,0.35)'},
+      room:{fill:'rgba(59,130,246,0.6)',glow:'rgba(59,130,246,0.3)'},
+      corridor:{fill:'rgba(148,163,184,0.45)',glow:'rgba(148,163,184,0.2)'},
+      stair:{fill:'rgba(168,85,247,0.55)',glow:'rgba(168,85,247,0.3)'},
+      elevator:{fill:'rgba(139,92,246,0.6)',glow:'rgba(139,92,246,0.35)'},
+      poi:{fill:'rgba(245,158,11,0.75)',glow:'rgba(245,158,11,0.45)'},
+      intersection:{fill:'rgba(100,116,139,0.55)',glow:'rgba(100,116,139,0.25)'},
+      bus_stop:{fill:'rgba(6,182,212,0.7)',glow:'rgba(6,182,212,0.4)'},
+      subway_station:{fill:'rgba(99,102,241,0.7)',glow:'rgba(99,102,241,0.4)'},
+      train_station:{fill:'rgba(217,119,6,0.7)',glow:'rgba(217,119,6,0.4)'},
+      parking:{fill:'rgba(34,197,94,0.6)',glow:'rgba(34,197,94,0.3)'},
+      hospital:{fill:'rgba(239,68,68,0.75)',glow:'rgba(239,68,68,0.45)'},
+      restaurant:{fill:'rgba(236,72,153,0.65)',glow:'rgba(236,72,153,0.35)'},
+      scenic_spot:{fill:'rgba(250,204,21,0.75)',glow:'rgba(250,204,21,0.45)'}
+    };
+    // Node size by type (B2)
+    var typeSizes={
+      entrance:12,poi:13,parking:11,bus_stop:11,subway_station:11,
+      train_station:12,hospital:12,restaurant:11,scenic_spot:12,
+      elevator:9,stair:8,intersection:10,corridor:5,room:8
+    };
+    // Label priority for collision avoidance (C1)
+    function labelPriority(n,state){
+      if(state==='start'||state==='goal')return 100;
+      var tp=n.type||'';
+      if(tp==='poi')return 80;if(tp==='entrance')return 70;
+      if(tp==='bus_stop'||tp==='subway_station'||tp==='train_station')return 60;
+      if(n.poi_category)return 50;if(tp==='intersection')return 20;
+      return 10;
+    }
+    // Collect visible nodes with priorities
+    var visNodes=this._getVisibleNodes();
+    var labeled=[];
+    for(var i=0;i<visNodes.length;i++){
+      var n=visNodes[i],state=this.state[n.node_id]||'normal';
+      labeled.push({node:n,state:state,priority:labelPriority(n,state)});
+    }
+    // Sort by priority descending (C2)
+    labeled.sort(function(a,b){return b.priority-a.priority});
+    // Draw nodes
+    for(var i=0;i<labeled.length;i++){
+      var item=labeled[i],n=item.node,state=item.state;
+      var isStart=state==='start',isGoal=state==='goal';
+      var floorOff=this._getFloorOffsetY(n.floor);
+      var p=this._toPixel(n.x,n.y+floorOff);
+      // Clip check
+      if(p.x<-20||p.x>this.viewW+20||p.y<-20||p.y>this.viewH+20)continue;
+      var tc=typeColors[n.type]||typeColors.intersection;
+      var r=typeSizes[n.type]||8;
+      if(isStart||isGoal)r=14;
+      // Glow (B3)
+      if(!isStart&&!isGoal){
+        ctx.shadowColor=tc.glow;ctx.shadowBlur=r*1.2;
+      }
+      // Fill
+      ctx.fillStyle=isStart?'rgba(16,185,129,0.85)':isGoal?'rgba(239,68,68,0.85)':tc.fill;
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+      // Stroke
+      ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();
       // Start/goal rings
-      if(isStart||isGoal){ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.strokeStyle=isStart?'#10b981':'#ef4444';ctx.lineWidth=2.5;ctx.stroke()}
+      if(isStart||isGoal){
+        ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);
+        ctx.strokeStyle=isStart?'#10b981':'#ef4444';ctx.lineWidth=2.5;ctx.stroke();
+        // Inner pulsing ring
+        ctx.beginPath();ctx.arc(p.x,p.y,r+7,0,Math.PI*2);
+        ctx.strokeStyle=isStart?'rgba(16,185,129,0.35)':'rgba(239,68,68,0.35)';ctx.lineWidth=1.5;ctx.stroke();
+      }
       // POI indicator
-      if(n.poi_category){ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(p.x,p.y-9,3,0,Math.PI*2);ctx.fill()}
-      // Label
-      var label=(n.name||n.node_id).length>8?(n.name||n.node_id).slice(0,7)+'…':(n.name||n.node_id);
-      ctx.fillStyle='#94a3b8';ctx.font='9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-      ctx.fillText(label,p.x,p.y+r+12);
+      if(n.poi_category&&!isStart&&!isGoal){
+        ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(p.x,p.y-r-2,3,0,Math.PI*2);ctx.fill();
+      }
+      // Label with collision avoidance (C2)
+      var rawLabel=(n.name||n.node_id);
+      var maxLen=this.zoom<0.6?4:this.zoom<1.2?6:8;
+      var label=rawLabel.length>maxLen?rawLabel.slice(0,maxLen-1)+'…':rawLabel;
+      var fontSize=Math.round(8*Math.min(this.zoom,2));
+      if(fontSize<6)fontSize=6;
+      ctx.font=fontSize+'px "Microsoft YaHei",Arial,sans-serif';
+      var labelW=ctx.measureText(label).width;
+      var labelH=fontSize;
+      var lx=p.x-labelW/2,ly=p.y+r+3;
+      // Bound check
+      if(lx<2)lx=2;if(lx+labelW>this.viewW-2)lx=this.viewW-2-labelW;
+      // Collision check (C2): always show start/goal, greedy for others
+      var collides=false;
+      if(!isStart&&!isGoal){
+        for(var j=0;j<this._placedLabels.length;j++){
+          var pl=this._placedLabels[j];
+          if(lx<pl.x+pl.w&&lx+labelW>pl.x&&ly<pl.y+pl.h&&ly+labelH>pl.y){collides=true;break}
+        }
+      }
+      if(!collides){
+        ctx.fillStyle=isStart?'#10b981':isGoal?'#ef4444':'rgba(226,232,240,0.85)';
+        ctx.textAlign='left';
+        ctx.fillText(label,lx,ly+labelH-2);
+        this._placedLabels.push({x:lx,y:ly,w:labelW,h:labelH});
+      }
     }
   }
+
+  // ── Path highlight ──
   _drawPathHighlight(){
     if(this.highlightPath.length<2)return;var ctx=this.ctx;
-    ctx.strokeStyle='#3b82f6';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.strokeStyle='#3b82f6';ctx.lineWidth=3*this.zoom;ctx.lineCap='round';ctx.lineJoin='round';
     ctx.shadowColor='rgba(59,130,246,0.5)';ctx.shadowBlur=10;
-    ctx.beginPath();
+    ctx.beginPath();var started=false;
     for(var i=0;i<this.highlightPath.length;i++){
       var n=this.nodeMap[this.highlightPath[i]];if(!n)continue;
-      var p=this._toPixel(n.x,n.y);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+      var floorOff=this._getFloorOffsetY(n.floor);
+      var p=this._toPixel(n.x,n.y+floorOff);
+      if(!started){ctx.moveTo(p.x,p.y);started=true}else ctx.lineTo(p.x,p.y);
     }
-    ctx.stroke();ctx.shadowBlur=0;
+    if(started)ctx.stroke();ctx.shadowBlur=0;
+    // Animated dots at path nodes
+    if(started&&this.zoom>0.5){
+      for(var i=0;i<this.highlightPath.length;i++){
+        var n2=this.nodeMap[this.highlightPath[i]];if(!n2)continue;
+        var fo2=this._getFloorOffsetY(n2.floor);
+        var pp=this._toPixel(n2.x,n2.y+fo2);
+        ctx.fillStyle='rgba(59,130,246,0.8)';ctx.beginPath();ctx.arc(pp.x,pp.y,3,0,Math.PI*2);ctx.fill();
+      }
+    }
   }
+
+  // ── Vehicle rendering ──
   _drawVehicles(){
     var a=this._vehAnim;var vehicleIds=Object.keys(a.smoothed);
     var colors=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
@@ -1569,7 +1854,7 @@ class SmartNavRenderer{
       var color=colors[i%colors.length];
       var isRunning=t.status==='running';
       var r=6,alpha=isRunning?1:0.5;
-      // ---- Route trail ----
+      // Route trail
       if(t.route_path&&t.current_position_index>0){
         ctx.strokeStyle='rgba(148,163,184,0.15)';ctx.lineWidth=2;ctx.setLineDash([3,6]);
         ctx.beginPath();var started=false;
@@ -1580,13 +1865,12 @@ class SmartNavRenderer{
         }
         if(started){ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([])}
       }
-      // ---- Direction cone ----
+      // Direction cone
       if(isRunning&&t.route_path&&t.current_position_index+1<t.route_path.length){
         var nnid=t.route_path[t.current_position_index+1],nn=this.nodeMap[nnid];
         if(nn){
           var np=this._toPixel(nn.x,nn.y),dx=np.x-p.x,dy=np.y-p.y,dist=Math.sqrt(dx*dx+dy*dy);
           if(dist>1){dx/=dist;dy/=dist}
-          // Draw direction arrow
           ctx.fillStyle=color;ctx.beginPath();
           var tipX=p.x+dx*(r+6),tipY=p.y+dy*(r+6);
           ctx.moveTo(tipX,tipY);
@@ -1595,19 +1879,19 @@ class SmartNavRenderer{
           ctx.closePath();ctx.fill();
         }
       }
-      // ---- Vehicle body ----
+      // Vehicle body
       ctx.globalAlpha=alpha;ctx.fillStyle=color;
       ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle='#fff';ctx.lineWidth=1.8;ctx.stroke();
       ctx.globalAlpha=1;
-      // ---- Status ring ----
+      // Status ring
       if(isRunning){
         ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();
       }else{
         ctx.strokeStyle='rgba(148,163,184,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([2,2]);
         ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
       }
-      // ---- Label ----
+      // Label
       var label=(t.name||vid).length>6?(t.name||vid).slice(0,5)+'…':(t.name||vid);
       ctx.fillStyle='#e2e8f0';ctx.font='bold 9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
       ctx.fillText(label,p.x,p.y-r-9);
@@ -1621,6 +1905,32 @@ class SmartNavRenderer{
       }
     }
   }
+
+  // ── Zoom indicator (D5) ──
+  _drawZoomIndicator(){
+    var ctx=this.ctx;
+    ctx.fillStyle='rgba(15,23,42,0.8)';ctx.fillRect(this.viewW-58,this.viewH-24,54,20);
+    ctx.fillStyle='#94a3b8';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText(Math.round(this.zoom*100)+'%',this.viewW-31,this.viewH-9);
+  }
+
+  // ── Floor buttons (Phase E) ──
+  _updateFloorButtons(){
+    var el=$('sm_floor_btns');
+    if(!el)return;
+    if(this.floors.length<=1){el.style.display='none';return}
+    el.style.display='';
+    var html='<button class="btn btn-xs '+(this.activeFloor===null?'btn-accent':'btn-outline-light')+'" onclick="_smRenderer.switchFloor(null)" style="font-size:10px">全部</button>';
+    for(var i=0;i<this.floors.length;i++){
+      var f=this.floors[i];
+      var label=f<0?'B'+(1-f)+'F':(f+1)+'F';
+      var active=this.activeFloor===f;
+      html+='<button class="btn btn-xs '+(active?'btn-accent':'btn-outline-light')+'" onclick="_smRenderer.switchFloor('+f+')" style="font-size:10px">'+label+'</button>';
+    }
+    el.innerHTML=html;
+  }
+
+  // ── Animation ──
   _startAnimation(){
     var a=this._vehAnim;if(a.animId)return;a.active=true;a.lastTime=0;
     var self=this;
@@ -1631,33 +1941,36 @@ class SmartNavRenderer{
       var hasActive=false;
       for(var k in a.target)if(a.target[k].status==='running'){hasActive=true;break}
       if(hasActive||Object.keys(a.target).length>0)self.render();
-      // Stop if no vehicles and all converged
       var allDone=Object.keys(a.target).length===0;
-      for(var k in a.smoothed){var s=a.smoothed[k],t=a.target[k];if(t){var dx=Math.abs(s.x-t.x),dy=Math.abs(s.y-t.y);if(dx>0.1||dy>0.1)allDone=false}}
+      for(var k in a.smoothed){var s2=a.smoothed[k],t2=a.target[k];if(t2){var dx=Math.abs(s2.x-t2.x),dy=Math.abs(s2.y-t2.y);if(dx>0.1||dy>0.1)allDone=false}}
       if(allDone&&!hasActive){self._vehAnim.animId=null;self._vehAnim.active=false;self.render();return}
       self._vehAnim.animId=requestAnimationFrame(step);
     }
     this._vehAnim.animId=requestAnimationFrame(step);
   }
   _interpolateVehicles(dt){
-    var a=this._vehAnim,factor=Math.min(dt*8,0.5); // smoothing factor
+    var a=this._vehAnim,factor=Math.min(dt*8,0.5);
     for(var k in a.target){
       var t=a.target[k],s=a.smoothed[k];if(!s)continue;
-      if(t.status==='running'){
-        s.x+=(t.x-s.x)*factor;s.y+=(t.y-s.y)*factor;
-      }else{
-        // Stopped vehicles converge faster
-        s.x+=(t.x-s.x)*factor*2;s.y+=(t.y-s.y)*factor*2;
-      }
+      if(t.status==='running'){s.x+=(t.x-s.x)*factor;s.y+=(t.y-s.y)*factor}
+      else{s.x+=(t.x-s.x)*factor*2;s.y+=(t.y-s.y)*factor*2}
     }
   }
+
+  // ── Hit test (accounts for zoom) ──
   hitTest(mx,my){
     var rect=this.canvas.getBoundingClientRect(),cx=mx-rect.left,cy=my-rect.top;
-    for(var i=0;i<this.nodes.length;i++){
-      var n=this.nodes[i],p=this._toPixel(n.x,n.y);
-      var dx=cx-p.x,dy=cy-p.y;if(Math.sqrt(dx*dx+dy*dy)<14)return n.node_id;
+    var visNodes=this._getVisibleNodes();
+    for(var i=0;i<visNodes.length;i++){
+      var n=visNodes[i],p=this._toPixel(n.x,n.y+this._getFloorOffsetY(n.floor));
+      var dx=cx-p.x,dy=cy-p.y;if(Math.sqrt(dx*dx+dy*dy)<14*this.zoom)return n.node_id;
     }
     return null;
+  }
+
+  // ── Zoom reset (D5) ──
+  resetZoom(){
+    this.zoom=1;this.panX=0;this.panY=0;this.render();
   }
 }
 
@@ -1701,8 +2014,37 @@ function renderSmartNav(){
       '</div></div>'+
       // CENTER CANVAS
       '<div class="col-lg-6">'+
-        '<div class="canvas-wrap mb-2" style="position:relative"><canvas id="sm_canvas" style="width:100%;height:520px"></canvas>'+
-          '<div class="canvas-tooltip" id="sm_tooltip"></div></div>'+
+        '<div class="canvas-wrap mb-2" style="position:relative"><canvas id="sm_canvas" style="width:100%;height:65vh;min-height:400px;max-height:800px"></canvas>'+
+          '<div class="canvas-tooltip" id="sm_tooltip"></div>'+
+          // Floor buttons (Phase E3)
+          '<div id="sm_floor_btns" class="floor-btns" style="display:none"></div>'+
+          // Legend toggle (Phase F2)
+          '<button class="legend-toggle-btn" id="sm_legend_btn" onclick="smToggleLegend()" title="图例"><i class="fa-solid fa-list"></i></button>'+
+          // Zoom reset button (Phase D5)
+          '<button class="zoom-reset-btn" onclick="_smRenderer.resetZoom()" title="重置视图"><i class="fa-solid fa-arrows-to-circle"></i></button>'+
+          // Legend overlay (Phase F2)
+          '<div class="legend-overlay" id="sm_legend" style="display:none">'+
+            '<div class="legend-title">图例 <button class="legend-close" onclick="smToggleLegend()">✕</button></div>'+
+            '<div class="legend-section"><b>节点类型</b>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(239,68,68,0.7)"></span>入口</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(245,158,11,0.75)"></span>兴趣点</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(6,182,212,0.7)"></span>公交站</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(99,102,241,0.7)"></span>地铁站</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(34,197,94,0.6)"></span>停车场</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(236,72,153,0.65)"></span>餐厅</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(250,204,21,0.75)"></span>景点</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(239,68,68,0.75)"></span>医院</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(100,116,139,0.55)"></span>路口</div>'+
+            '</div>'+
+            '<div class="legend-section"><b>道路类型</b>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(239,68,68,0.45);height:3px"></span>高速</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(148,163,184,0.4);height:2px"></span>主干道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(6,182,212,0.45);height:2px;border:none;border-top:2px dashed rgba(6,182,212,0.45)"></span>公交道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(34,197,94,0.35);height:1.5px"></span>步道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(139,92,246,0.45);height:2px;border:none;border-top:2px dashed rgba(139,92,246,0.45)"></span>地铁</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
         '<div class="info-bar mb-2">'+
           '<span><i class="fa-solid fa-route"></i>距离: <b class="val" id="sm_dist">-</b></span>'+
           '<span><i class="fa-solid fa-eye"></i>访问: <b class="val" id="sm_visited">-</b></span>'+
@@ -1749,6 +2091,12 @@ function renderSmartNav(){
 }
 
 async function initSmartNav(){
+  // Protocol check: warn if opened via file:// (API calls will fail)
+  if(window.location.protocol==='file:'){
+    toast('⚠ 检测到 file:// 协议 — API请求将失败。<br>请通过 <code>python backend/app.py</code> 启动服务器后访问 <b>http://localhost:5001</b>','error');
+    $('sm_content').innerHTML='<div class="alert alert-warning m-3"><i class="fa-solid fa-triangle-exclamation me-2"></i><b>无法加载智慧导航</b><br><small>此页面需要HTTP服务器。请运行 <code>python backend/app.py</code> 然后访问 <code>http://localhost:5001</code></small></div>';
+    return;
+  }
   // Load metadata + scenes
   var metaR=await api('/api/smart/meta');
   if(!metaR.success){toast('加载SmartNav元数据失败','error');return}
@@ -1757,7 +2105,20 @@ async function initSmartNav(){
   // Render scene tabs
   var tabsHtml='';for(var i=0;i<scenes.length;i++){var s=scenes[i];tabsHtml+='<span class="scene-tab'+(s.scene_id===_smSceneId?' active':'')+'" data-scene="'+esc(s.scene_id)+'" onclick="smSwitchScene(\''+esc(s.scene_id)+'\')"><i class="fa-solid fa-map-pin"></i> '+esc(s.name)+' <span class="scene-badge">'+s.node_count+'/'+s.edge_count+'</span></span>'}$('sm_scenes').innerHTML=tabsHtml;
   // Init canvas
-  if(!_smRenderer){var canvas=$('sm_canvas');if(canvas){_smRenderer=new SmartNavRenderer(canvas);canvas.addEventListener('click',function(e){var nid=_smRenderer.hitTest(e.clientX,e.clientY);if(!nid)return;if(!_smStart||(_smStart&&_smGoal)){_smStart=nid;_smGoal='';$('sm_start').value=nid;$('sm_goal').value='';toast('起点: '+nid,'info')}else{_smGoal=nid;$('sm_goal').value=nid;toast('终点: '+nid,'info')}});canvas.addEventListener('mousemove',function(e){var nid=_smRenderer.hitTest(e.clientX,e.clientY);if(nid){var n=_smRenderer.nodeMap[nid];if(n){var tt=$('sm_tooltip');tt.style.display='block';tt.style.left=(e.clientX-canvas.getBoundingClientRect().left+15)+'px';tt.style.top=(e.clientY-canvas.getBoundingClientRect().top-30)+'px';tt.innerHTML='<b>'+esc(n.name||nid)+'</b><br><small>'+esc(nid)+' · '+esc(n.type||'')+(n.floor?' · '+n.floor+'F':'')+'</small>'}}else{var tt=$('sm_tooltip');tt.style.display='none'}})}}
+  if(!_smRenderer){var canvas=$('sm_canvas');if(canvas){_smRenderer=new SmartNavRenderer(canvas);
+    // Node click via custom event (distinguishes clicks from drags)
+    canvas.addEventListener('node-click',function(e){
+      var nid=e.detail.nodeId;
+      if(!_smStart||(_smStart&&_smGoal)){_smStart=nid;_smGoal='';$('sm_start').value=nid;$('sm_goal').value='';toast('起点: '+nid,'info')}
+      else{_smGoal=nid;$('sm_goal').value=nid;toast('终点: '+nid,'info')}
+    });
+    // Hover tooltip
+    canvas.addEventListener('mousemove',function(e){
+      var nid=_smRenderer.hitTest(e.clientX,e.clientY);
+      if(nid){var n=_smRenderer.nodeMap[nid];if(n){var tt=$('sm_tooltip');tt.style.display='block';tt.style.left=(e.clientX-canvas.getBoundingClientRect().left+15)+'px';tt.style.top=(e.clientY-canvas.getBoundingClientRect().top-30)+'px';tt.innerHTML='<b>'+esc(n.name||nid)+'</b><br><small>'+esc(nid)+' · '+esc(n.type||'')+(n.floor!==undefined?' · '+(n.floor<0?'B'+(1-n.floor)+'F':(n.floor+1)+'F'):'')+'</small>'}}
+      else{var tt=$('sm_tooltip');tt.style.display='none'}
+    });
+  }}}
   // Load active scene
   await smLoadScene(_smSceneId);
   // Set dropdown values
@@ -1787,6 +2148,13 @@ async function smLoadScene(sceneId){
 }
 
 async function smSwitchScene(sceneId){await smLoadScene(sceneId);toast('已切换场景: '+sceneId,'info')}
+
+function smToggleLegend(){
+  var el=$('sm_legend');if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function smZoomReset(){if(_smRenderer)_smRenderer.resetZoom()}
 
 async function smFindPath(){
   var start=$('sm_start').value.trim(),goal=$('sm_goal').value.trim();

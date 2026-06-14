@@ -76,30 +76,66 @@ VALID_POI_CATEGORIES = [p.value for p in POICategory]
 # Lazy init helpers
 # ═══════════════════════════════════════════════════════════════════════════
 
+# Accumulated init errors for health diagnostics
+_init_errors: List[str] = []
+
+
 def _init_all():
-    """Initialize all singletons and load demo maps."""
+    """Initialize all singletons and load demo maps.
+
+    Each component is wrapped in try/except so one failure
+    does not prevent the rest from initializing.
+    """
     global _map_manager, _path_service, _search_service
     global _traffic_service, _vehicle_service, _navigation_service
     global _traffic_simulator, _vehicle_simulator, _active_scene_id
 
+    # ── Map Manager ──
     if _map_manager is None:
-        _map_manager = MapManager()
-        _map_manager.load_all_demo_maps()
-        if _map_manager._scenes:
-            _active_scene_id = list(_map_manager._scenes.keys())[0]
+        try:
+            _map_manager = MapManager()
+            _map_manager.load_all_demo_maps()
+            if _map_manager._scenes:
+                _active_scene_id = list(_map_manager._scenes.keys())[0]
+        except Exception as e:
+            _init_errors.append(f"MapManager init failed: {e}")
+            try:
+                _map_manager = MapManager()
+            except Exception:
+                _map_manager = None
 
+    # ── Services ──
     if _path_service is None:
-        _path_service = PathService()
-    if _search_service is None:
-        _search_service = SearchService()
-    if _traffic_service is None:
-        _traffic_service = TrafficService()
-    if _vehicle_service is None:
-        _vehicle_service = VehicleService()
-    if _navigation_service is None:
-        _navigation_service = NavigationService()
+        try:
+            _path_service = PathService()
+        except Exception as e:
+            _init_errors.append(f"PathService init failed: {e}")
 
-    # Initialize simulators lazily when needed
+    if _search_service is None:
+        try:
+            _search_service = SearchService()
+        except Exception as e:
+            _init_errors.append(f"SearchService init failed: {e}")
+
+    if _traffic_service is None:
+        try:
+            _traffic_service = TrafficService()
+        except Exception as e:
+            _init_errors.append(f"TrafficService init failed: {e}")
+
+    if _vehicle_service is None:
+        try:
+            _vehicle_service = VehicleService()
+        except Exception as e:
+            _init_errors.append(f"VehicleService init failed: {e}")
+
+    if _navigation_service is None:
+        try:
+            _navigation_service = NavigationService()
+        except Exception as e:
+            _init_errors.append(f"NavigationService init failed: {e}")
+
+    # Simulators are initialized lazily when needed
 
 
 def _get_graph() -> Optional[NavGraph]:
@@ -1429,5 +1465,69 @@ def register_smart_routes(app):
         except Exception as e:
             return _error(str(e), 500)
 
+    # ======================================================================
+    # 11. HEALTH / DIAGNOSTICS (1 endpoint)
+    # ======================================================================
+
+    @app.route("/api/smart/health", methods=["GET"])
+    def api_smart_health():
+        """GET /api/smart/health — Diagnostic health check for SmartNav subsystem.
+
+        Returns status of all singletons, loaded maps, active scene,
+        and any init errors encountered during lazy initialization.
+        """
+        try:
+            _init_all()
+
+            scenes_info = {}
+            if _map_manager:
+                try:
+                    for sid, scene in _map_manager._scenes.items():
+                        graph = _map_manager.get_graph(sid)
+                        scenes_info[sid] = {
+                            "name": scene.name if hasattr(scene, 'name') else sid,
+                            "scene_type": scene.scene_type.value if hasattr(scene, 'scene_type') else "unknown",
+                            "node_count": len(graph.vertices) if graph else 0,
+                            "edge_count": sum(len(graph.get_edges(nid)) for nid in graph) if graph else 0,
+                        }
+                except Exception as e:
+                    scenes_info = {"_error": str(e)}
+
+            simulators = {
+                "traffic_simulator": {
+                    "initialized": _traffic_simulator is not None,
+                    "running": _traffic_simulator.is_running() if _traffic_simulator else False,
+                },
+                "vehicle_simulator": {
+                    "initialized": _vehicle_simulator is not None,
+                    "running": _vehicle_simulator.is_running() if _vehicle_simulator else False,
+                },
+            }
+
+            services = {
+                "map_manager": _map_manager is not None,
+                "path_service": _path_service is not None,
+                "search_service": _search_service is not None,
+                "traffic_service": _traffic_service is not None,
+                "vehicle_service": _vehicle_service is not None,
+                "navigation_service": _navigation_service is not None,
+            }
+
+            all_healthy = all(services.values()) and len(_init_errors) == 0
+
+            return _ok({
+                "status": "ok" if all_healthy else "degraded",
+                "all_healthy": all_healthy,
+                "services": services,
+                "simulators": simulators,
+                "scenes": scenes_info,
+                "active_scene_id": _active_scene_id,
+                "scene_count": len(scenes_info) if isinstance(scenes_info, dict) and "_error" not in scenes_info else 0,
+                "init_errors": _init_errors,
+                "endpoints": "30+ REST + SSE stream",
+            })
+        except Exception as e:
+            return _error(str(e), 500)
+
     # Done registering
-    print(f"[routes_smart] Registered 30+ SmartNav endpoints + SSE stream.")
+    print(f"[routes_smart] Registered 30+ SmartNav endpoints + SSE stream + health.")

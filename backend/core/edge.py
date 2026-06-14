@@ -12,6 +12,14 @@ from typing import Any, Dict, Optional, Set
 from backend.models.transport import RoadType, TransportMode
 
 
+def _safe_road_type(value):
+    """Parse RoadType safely, falling back to PATH on ValueError."""
+    try:
+        return RoadType(value)
+    except (ValueError, TypeError):
+        return RoadType.PATH
+
+
 # Default allowed modes per road type
 DEFAULT_ALLOWED_MODES: Dict[RoadType, Set[TransportMode]] = {
     RoadType.PATH: {TransportMode.WALKING},
@@ -104,7 +112,7 @@ class Edge:
             from_id=data["from"],
             to_id=data["to"],
             weight=data.get("weight", 0.0),
-            road_type=RoadType(data.get("road_type", "path")),
+            road_type=_safe_road_type(data.get("road_type", "path")),
             one_way=data.get("one_way", False),
             allowed_modes=allowed_modes,
             speed_limit=data.get("speed_limit", 0.0),

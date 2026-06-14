@@ -9,6 +9,14 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 
+def _safe_enum(enum_cls, value, default):
+    """Parse an enum safely, falling back to default on ValueError."""
+    try:
+        return enum_cls(value)
+    except (ValueError, TypeError):
+        return default
+
+
 class NavNodeType(Enum):
     """Extended node type classification for multi-scene navigation."""
     ROOM = "room"
@@ -96,7 +104,7 @@ class NavNode:
         return cls(
             node_id=data["node_id"],
             name=data["name"],
-            node_type=NavNodeType(data.get("node_type", "intersection")),
+            node_type=_safe_enum(NavNodeType, data.get("node_type", "intersection"), NavNodeType.INTERSECTION),
             floor=data.get("floor", 0),
             x=data.get("x", 0.0),
             y=data.get("y", 0.0),
