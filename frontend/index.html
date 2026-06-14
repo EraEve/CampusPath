@@ -217,6 +217,69 @@ body{
   background:linear-gradient(135deg,#2563eb,#3b82f6);
   border-color:var(--primary);color:#fff;box-shadow:0 0 16px var(--primary-glow);
 }
+
+/* ---- SmartNav Scene Tabs ---- */
+.scene-tab{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:10px;
+  border:1px solid var(--border-subtle);background:var(--bg-card);
+  color:var(--text-secondary);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;margin:2px;
+}
+.scene-tab:hover{border-color:var(--accent);color:var(--accent)}
+.scene-tab.active{
+  background:linear-gradient(135deg,#0891b2,#06b6d4);
+  border-color:var(--accent);color:#fff;box-shadow:0 0 16px var(--accent-glow);
+}
+.scene-tab .scene-badge{font-size:10px;opacity:0.8}
+
+/* ---- SmartNav Sidebar ---- */
+.sm-sidebar{max-height:calc(100vh - 160px);overflow-y:auto;padding-right:4px}
+.sm-sidebar::-webkit-scrollbar{width:4px}
+.sm-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+
+/* ---- SmartNav traffic indicators ---- */
+.traffic-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.traffic-dot.normal{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.5)}
+.traffic-dot.moderate{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.5)}
+.traffic-dot.heavy{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,0.5)}
+.traffic-dot.blocked{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.5)}
+
+/* ---- Vehicle row ---- */
+.vehicle-row{
+  display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px;
+}
+.vehicle-row:last-child{border-bottom:none}
+.vehicle-bar{
+  flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;
+}
+.vehicle-bar-fill{
+  height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:3px;
+  transition:width 0.3s;
+}
+
+/* ---- SSE indicator ---- */
+.sse-indicator{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.sse-dot{width:8px;height:8px;border-radius:50%;background:#64748b}
+.sse-dot.connected{background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.6);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ---- SmartNav alert list ---- */
+.alert-list{max-height:200px;overflow-y:auto;font-size:12px}
+.alert-item{padding:6px 10px;border-radius:8px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.alert-item.info{background:rgba(59,130,246,0.1);border-left:2px solid var(--primary)}
+.alert-item.warning{background:rgba(245,158,11,0.1);border-left:2px solid var(--warning)}
+.alert-item.danger{background:rgba(239,68,68,0.1);border-left:2px solid var(--danger)}
+.alert-item.success{background:rgba(16,185,129,0.1);border-left:2px solid var(--success)}
+
+/* ---- Canvas tooltip ---- */
+.canvas-tooltip{
+  position:absolute;background:rgba(15,23,42,0.95);border:1px solid var(--border-glow);
+  border-radius:10px;padding:8px 12px;font-size:12px;color:var(--text-primary);
+  pointer-events:none;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  white-space:nowrap;display:none;
+}
 .floor-tab.all-floors{padding:0 12px;width:auto;font-size:11px}
 
 /* ---- Quick Action ---- */
@@ -433,6 +496,7 @@ function buildNavTabs(){
     {id:'benchmark',icon:'chart-bar',label:'算法基准'},
     {id:'accessible',icon:'wheelchair-move',label:'无障碍通道'},
     {id:'validate',icon:'shield-check',label:'系统诊断'},
+    {id:'smartnav',icon:'brain',label:'智慧导航'},
     {id:'about',icon:'circle-info',label:'关于系统'},
   ];
   var html='';
@@ -453,6 +517,7 @@ function renderPage(pid){
     case 'benchmark':h=renderBenchmark();break;
     case 'accessible':h=renderAccessible();break;
     case 'validate':h=renderValidate();break;
+    case 'smartnav':h=renderSmartNav();break;
     case 'about':h=renderAbout();break;
     default:h=renderDashboard();
   }
@@ -463,6 +528,7 @@ function renderPage(pid){
   if(pid==='benchmark')loadBenchmark();
   if(pid==='accessible')initAccessible();
   if(pid==='validate')loadValidate();
+  if(pid==='smartnav')initSmartNav();
 }
 
 /* ============================================================
@@ -1374,6 +1440,404 @@ function renderPseudocode(){
     '  + |floor_a - floor_b| × <span class="num">4.0</span>\n'+
     '  <span class="cm"># 层高4m，垂直移动惩罚</span></div></div></div></div>'+
     '</div>';
+}
+
+/* ============================================================
+   SMART NAV RENDERER — renders NavGraph maps on Canvas
+   ============================================================ */
+class SmartNavRenderer{
+  constructor(canvas){
+    this.canvas=canvas;this.ctx=canvas.getContext('2d');
+    this.nodes=[];this.edges=[];this.nodeMap={};
+    this.state={};this.highlightPath=[];this.vehicles=[];
+    this.scaleX=1;this.scaleY=1;this.offsetX=0;this.offsetY=0;
+    this.minX=0;this.minY=0;this.maxX=1000;this.maxY=600;
+    this.hoveredNode=null;this.tooltipEl=null;
+    this._resize();window.addEventListener('resize',()=>this._resize());
+  }
+  _resize(){
+    var dpr=window.devicePixelRatio||1;
+    var rect=this.canvas.getBoundingClientRect();
+    this.canvas.width=rect.width*dpr;this.canvas.height=rect.height*dpr;
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    this.viewW=rect.width;this.viewH=rect.height;
+  }
+  loadScene(nodes,edges){
+    this.nodes=nodes||[];this.edges=edges||[];this.nodeMap={};
+    for(var i=0;i<this.nodes.length;i++)this.nodeMap[this.nodes[i].node_id]=this.nodes[i];
+    // Compute bounds
+    if(this.nodes.length>0){
+      this.minX=Infinity;this.minY=Infinity;this.maxX=-Infinity;this.maxY=-Infinity;
+      for(var i=0;i<this.nodes.length;i++){
+        var n=this.nodes[i];
+        if(n.x<this.minX)this.minX=n.x;if(n.y<this.minY)this.minY=n.y;
+        if(n.x>this.maxX)this.maxX=n.x;if(n.y>this.maxY)this.maxY=n.y;
+      }
+      var pad=40;this.offsetX=pad;this.offsetY=pad;
+      this.scaleX=(this.viewW-pad*2)/(this.maxX-this.minX||1);
+      this.scaleY=(this.viewH-pad*2)/(this.maxY-this.minY||1);
+    }
+    this.render();
+  }
+  _toPixel(nx,ny){return{x:(nx-this.minX)*this.scaleX+this.offsetX,y:(ny-this.minY)*this.scaleY+this.offsetY}}
+  setState(state,path){this.state=state||{};this.highlightPath=path||[];this.render()}
+  setVehicles(vehicles){this.vehicles=vehicles||[];this.render()}
+  setTraffic(trafficData){this.trafficData=trafficData||{};this.render()}
+  render(){
+    var ctx=this.ctx;ctx.clearRect(0,0,this.viewW,this.viewH);
+    this._drawEdges();this._drawPathHighlight();this._drawNodes();this._drawVehicles();
+  }
+  _drawEdges(){
+    var ctx=this.ctx;ctx.lineWidth=1.5;
+    for(var i=0;i<this.edges.length;i++){
+      var e=this.edges[i],p1=this._toPixel(this.nodeMap[e.from]?.x||0,this.nodeMap[e.from]?.y||0),p2=this._toPixel(this.nodeMap[e.to]?.x||0,this.nodeMap[e.to]?.y||0);
+      if(!this.nodeMap[e.from]||!this.nodeMap[e.to])continue;
+      // Check traffic
+      var isBlocked=false,isCongested=false;
+      if(this.trafficData){
+        var key=e.from+'→'+e.to;
+        if(this.trafficData.blockages){for(var b=0;b<this.trafficData.blockages.length;b++){if(this.trafficData.blockages[b].edge===key){isBlocked=true;break}}}
+        if(this.trafficData.congested_details){for(var c=0;c<this.trafficData.congested_details.length;c++){if(this.trafficData.congested_details[c].from===e.from&&this.trafficData.congested_details[c].to===e.to){isCongested=true;break}}}
+      }
+      if(isBlocked){ctx.strokeStyle='rgba(239,68,68,0.6)';ctx.lineWidth=3;ctx.setLineDash([6,4])}
+      else if(isCongested){ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=2;ctx.setLineDash([])}
+      else{ctx.strokeStyle='rgba(148,163,184,0.2)';ctx.lineWidth=1.5;ctx.setLineDash([])}
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  _drawNodes(){
+    var ctx=this.ctx;
+    var typeColors={entrance:'rgba(239,68,68,0.4)',road:'rgba(148,163,184,0.3)',intersection:'rgba(148,163,184,0.35)',
+      poi:'rgba(245,158,11,0.4)',food:'rgba(16,185,129,0.35)',parking:'rgba(59,130,246,0.35)',
+      station:'rgba(168,85,247,0.35)',scenic:'rgba(236,72,153,0.35)',default:'rgba(148,163,184,0.3)'};
+    for(var i=0;i<this.nodes.length;i++){
+      var n=this.nodes[i],p=this._toPixel(n.x,n.y),r=8;
+      var state=this.state[n.node_id]||'normal',isStart=state==='start',isGoal=state==='goal';
+      var cl=typeColors[n.type]||typeColors.default;
+      // Draw node
+      ctx.fillStyle=cl;ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(148,163,184,0.25)';ctx.lineWidth=1;ctx.stroke();
+      // Start/goal rings
+      if(isStart||isGoal){ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.strokeStyle=isStart?'#10b981':'#ef4444';ctx.lineWidth=2.5;ctx.stroke()}
+      // POI indicator
+      if(n.poi_category){ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(p.x,p.y-9,3,0,Math.PI*2);ctx.fill()}
+      // Label
+      var label=(n.name||n.node_id).length>8?(n.name||n.node_id).slice(0,7)+'…':(n.name||n.node_id);
+      ctx.fillStyle='#94a3b8';ctx.font='9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(label,p.x,p.y+r+12);
+    }
+  }
+  _drawPathHighlight(){
+    if(this.highlightPath.length<2)return;var ctx=this.ctx;
+    ctx.strokeStyle='#3b82f6';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.shadowColor='rgba(59,130,246,0.5)';ctx.shadowBlur=10;
+    ctx.beginPath();
+    for(var i=0;i<this.highlightPath.length;i++){
+      var n=this.nodeMap[this.highlightPath[i]];if(!n)continue;
+      var p=this._toPixel(n.x,n.y);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+    }
+    ctx.stroke();ctx.shadowBlur=0;
+  }
+  _drawVehicles(){
+    for(var i=0;i<this.vehicles.length;i++){
+      var v=this.vehicles[i],ctx=this.ctx;
+      if(v.x===undefined||v.y===undefined)continue;
+      var p=this._toPixel(v.x,v.y);
+      ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='bold 8px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(v.vehicle_id||v.name,p.x,p.y-14);
+    }
+  }
+  hitTest(mx,my){
+    var rect=this.canvas.getBoundingClientRect(),cx=mx-rect.left,cy=my-rect.top;
+    for(var i=0;i<this.nodes.length;i++){
+      var n=this.nodes[i],p=this._toPixel(n.x,n.y);
+      var dx=cx-p.x,dy=cy-p.y;if(Math.sqrt(dx*dx+dy*dy)<14)return n.node_id;
+    }
+    return null;
+  }
+}
+
+/* ============================================================
+   SMART NAV PAGE — PAGE 8: 智慧导航
+   ============================================================ */
+var _smRenderer=null,_smSceneId='',_smNodes=[],_smEdges=[];
+var _smStart='',_smGoal='',_smMode='driving',_smAlgo='dijkstra',_smHeuristic='euclidean';
+var _smSSE=null,_smVehicles=[],_smTrafficData=null,_smAlerts=[];
+
+function renderSmartNav(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-brain text-accent me-2"></i>智慧导航</h3>'+
+    '<p class="text-secondary small mb-3">多地图 · 8算法 · 5出行模式 · 实时交通 · 车辆监管 · 毫秒级寻路</p>'+
+    '<div class="row g-3">'+
+      // LEFT SIDEBAR
+      '<div class="col-lg-3"><div class="sm-sidebar">'+
+        // Scene selector
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-map me-2"></i>地图场景</div>'+
+        '<div class="card-body"><div id="sm_scenes" class="d-flex flex-wrap gap-1 mb-2"></div>'+
+        '<div class="d-flex gap-2"><select class="form-select form-select-sm" id="sm_mode"><option value="walking">🚶 步行</option><option value="driving" selected>🚗 驾车</option><option value="bus">🚌 公交</option><option value="train">🚄 火车</option><option value="subway">🚇 地铁</option></select>'+
+        '<select class="form-select form-select-sm" id="sm_algo"><option value="dijkstra">Dijkstra</option><option value="a_star">A*</option><option value="bfs">BFS</option><option value="bidirectional_dijkstra">双向Dijkstra</option><option value="bidirectional_bfs">双向BFS</option><option value="congestion_avoidance">避堵</option><option value="multi_criteria">多目标</option></select></div></div></div>'+
+        // Path inputs
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-route me-2"></i>路径规划</div>'+
+        '<div class="card-body">'+
+          '<label class="form-label">起点 (点击地图或输入)</label><input class="form-control form-control-sm mb-2" id="sm_start" placeholder="N001">'+
+          '<label class="form-label">终点</label><input class="form-control form-control-sm mb-2" id="sm_goal" placeholder="N025">'+
+          '<div id="sm_heur_wrap"><label class="form-label">启发函数</label><select class="form-select form-select-sm mb-2" id="sm_heuristic"><option value="euclidean">欧几里得</option><option value="manhattan">曼哈顿</option><option value="floor_aware">楼层感知</option></select></div>'+
+          '<div class="d-grid gap-2">'+
+            '<button class="btn btn-primary btn-rounded btn-sm" onclick="smFindPath()"><i class="fa-solid fa-magnifying-glass me-1"></i>查找路径</button>'+
+            '<button class="btn btn-accent btn-rounded btn-sm" onclick="smCompareAll()"><i class="fa-solid fa-code-compare me-1"></i>对比全部算法</button>'+
+          '</div>'+
+        '</div></div>'+
+        // POI Search
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-magnifying-glass-location me-2"></i>兴趣点搜索</div>'+
+        '<div class="card-body">'+
+          '<select class="form-select form-select-sm mb-2" id="sm_poi_cat"><option value="">全部分类</option><option value="scenic">景点</option><option value="food">美食</option><option value="parking">停车场</option><option value="hospital">医院</option></select>'+
+          '<input class="form-control form-control-sm mb-2" id="sm_poi_radius" placeholder="搜索半径 (留空=不限)" type="number">'+
+          '<button class="btn btn-outline-light btn-rounded btn-sm w-100" onclick="smSearchNearby()"><i class="fa-solid fa-search me-1"></i>搜索附近</button>'+
+          '<div id="sm_poi_results" class="mt-2" style="max-height:150px;overflow-y:auto;font-size:11px"></div>'+
+        '</div></div>'+
+      '</div></div>'+
+      // CENTER CANVAS
+      '<div class="col-lg-6">'+
+        '<div class="canvas-wrap mb-2" style="position:relative"><canvas id="sm_canvas" style="width:100%;height:520px"></canvas>'+
+          '<div class="canvas-tooltip" id="sm_tooltip"></div></div>'+
+        '<div class="info-bar mb-2">'+
+          '<span><i class="fa-solid fa-route"></i>距离: <b class="val" id="sm_dist">-</b></span>'+
+          '<span><i class="fa-solid fa-eye"></i>访问: <b class="val" id="sm_visited">-</b></span>'+
+          '<span><i class="fa-solid fa-clock"></i>耗时: <b class="val" id="sm_time">-</b></span>'+
+          '<span><i class="fa-solid fa-coins"></i>费用: <b class="val" id="sm_cost">-</b></span>'+
+          '<span><i class="fa-solid fa-arrow-right-arrow-left"></i>路径节点: <b class="val" id="sm_path_len">-</b></span>'+
+          '<span class="sse-indicator ms-auto"><span class="sse-dot" id="sm_sse_dot"></span><span id="sm_sse_text">未连接</span></span>'+
+        '</div>'+
+        // Path detail
+        '<div class="card card-custom mb-2" id="sm_path_detail" style="display:none"><div class="card-header"><i class="fa-solid fa-list-ol me-2"></i>路径详情</div>'+
+        '<div class="card-body" id="sm_path_steps" style="max-height:200px;overflow-y:auto;font-size:12px"></div></div>'+
+      '</div>'+
+      // RIGHT SIDEBAR
+      '<div class="col-lg-3"><div class="sm-sidebar">'+
+        // Traffic
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-car-on me-2"></i>实时交通 <span class="badge badge-accent ms-1" id="sm_traffic_badge">0</span></div>'+
+        '<div class="card-body" id="sm_traffic_status" style="max-height:180px;overflow-y:auto;font-size:12px"><p class="text-muted small mb-0">无交通事件</p></div></div>'+
+        // Vehicles
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-truck me-2"></i>车辆监管 <span class="badge badge-primary ms-1" id="sm_veh_count">0</span></div>'+
+        '<div class="card-body" id="sm_vehicle_list" style="max-height:160px;overflow-y:auto"><p class="text-muted small mb-0">无车辆</p></div>'+
+        '<div class="card-footer"><div class="d-flex gap-1">'+
+          '<button class="btn btn-outline-light btn-xs flex-fill" onclick="smAddRandomVehicle()"><i class="fa-solid fa-plus me-1"></i>随机添加</button>'+
+          '<button class="btn btn-outline-danger btn-xs flex-fill" onclick="smClearVehicles()"><i class="fa-solid fa-trash me-1"></i>清空</button>'+
+        '</div></div></div>'+
+        // Alerts
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-bell me-2"></i>导航告警</div>'+
+        '<div class="card-body alert-list" id="sm_alerts"><p class="text-muted small mb-0">无告警</p></div></div>'+
+        // Simulation + Navigation
+        '<div class="card card-custom"><div class="card-header"><i class="fa-solid fa-play me-2"></i>模拟 & 导航</div>'+
+        '<div class="card-body">'+
+          '<div class="d-grid gap-2 mb-2">'+
+            '<button class="btn btn-outline-warning btn-xs" id="sm_traffic_sim_btn" onclick="smTrafficSimToggle()"><i class="fa-solid fa-traffic-light me-1"></i>启动交通模拟</button>'+
+            '<button class="btn btn-outline-info btn-xs" id="sm_vehicle_sim_btn" onclick="smVehicleSimToggle()"><i class="fa-solid fa-truck-fast me-1"></i>启动车辆模拟</button>'+
+          '</div>'+
+          '<hr class="my-2" style="border-color:var(--border-subtle)">'+
+          '<div class="d-grid gap-2">'+
+            '<button class="btn btn-outline-success btn-xs" id="sm_nav_start_btn" onclick="smStartNavigation()"><i class="fa-solid fa-location-arrow me-1"></i>开始实时导航</button>'+
+            '<button class="btn btn-outline-danger btn-xs" id="sm_nav_stop_btn" onclick="smStopNavigation()" style="display:none"><i class="fa-solid fa-stop me-1"></i>停止导航</button>'+
+            '<button class="btn btn-outline-light btn-xs" onclick="smConnectSSE()"><i class="fa-solid fa-plug me-1"></i>连接SSE流</button>'+
+          '</div>'+
+        '</div></div>'+
+      '</div></div>'+
+    '</div>';
+}
+
+async function initSmartNav(){
+  // Load metadata + scenes
+  var metaR=await api('/api/smart/meta');
+  if(!metaR.success){toast('加载SmartNav元数据失败','error');return}
+  var scenes=metaR.data.scenes||[];
+  _smSceneId=metaR.data.active_scene_id||(scenes.length>0?scenes[0].scene_id:'');
+  // Render scene tabs
+  var tabsHtml='';for(var i=0;i<scenes.length;i++){var s=scenes[i];tabsHtml+='<span class="scene-tab'+(s.scene_id===_smSceneId?' active':'')+'" data-scene="'+esc(s.scene_id)+'" onclick="smSwitchScene(\''+esc(s.scene_id)+'\')"><i class="fa-solid fa-map-pin"></i> '+esc(s.name)+' <span class="scene-badge">'+s.node_count+'/'+s.edge_count+'</span></span>'}$('sm_scenes').innerHTML=tabsHtml;
+  // Init canvas
+  if(!_smRenderer){var canvas=$('sm_canvas');if(canvas){_smRenderer=new SmartNavRenderer(canvas);canvas.addEventListener('click',function(e){var nid=_smRenderer.hitTest(e.clientX,e.clientY);if(!nid)return;if(!_smStart||(_smStart&&_smGoal)){_smStart=nid;_smGoal='';$('sm_start').value=nid;$('sm_goal').value='';toast('起点: '+nid,'info')}else{_smGoal=nid;$('sm_goal').value=nid;toast('终点: '+nid,'info')}});canvas.addEventListener('mousemove',function(e){var nid=_smRenderer.hitTest(e.clientX,e.clientY);if(nid){var n=_smRenderer.nodeMap[nid];if(n){var tt=$('sm_tooltip');tt.style.display='block';tt.style.left=(e.clientX-canvas.getBoundingClientRect().left+15)+'px';tt.style.top=(e.clientY-canvas.getBoundingClientRect().top-30)+'px';tt.innerHTML='<b>'+esc(n.name||nid)+'</b><br><small>'+esc(nid)+' · '+esc(n.type||'')+(n.floor?' · '+n.floor+'F':'')+'</small>'}}else{var tt=$('sm_tooltip');tt.style.display='none'}})}}
+  // Load active scene
+  await smLoadScene(_smSceneId);
+  // Set dropdown values
+  var modeSel=$('sm_mode');if(modeSel)modeSel.value=_smMode;
+  var algoSel=$('sm_algo');if(algoSel){algoSel.value=_smAlgo;algoSel.addEventListener('change',function(){_smAlgo=this.value;var heurWrap=$('sm_heur_wrap');heurWrap.style.display=this.value==='a_star'?'block':'none'})}
+  var heurSel=$('sm_heuristic');if(heurSel)heurSel.value=_smHeuristic;
+  var heurWrap=$('sm_heur_wrap');if(heurWrap)heurWrap.style.display=_smAlgo==='a_star'?'block':'none';
+  var modeSel2=$('sm_mode');if(modeSel2)modeSel2.addEventListener('change',function(){_smMode=this.value});
+  // Auto-connect SSE
+  smConnectSSE();
+  // Refresh traffic
+  await smRefreshTraffic();
+}
+
+async function smLoadScene(sceneId){
+  _smSceneId=sceneId;
+  // Activate on server
+  await api('/api/smart/scenes/'+sceneId+'/activate',{method:'POST'});
+  // Load graph data
+  var r=await api('/api/smart/scenes/'+sceneId);
+  if(!r.success){toast('加载场景失败','error');return}
+  _smNodes=r.data.nodes||[];_smEdges=r.data.edges||[];
+  // Update scene tabs
+  document.querySelectorAll('#sm_scenes .scene-tab').forEach(function(t){t.classList.toggle('active',t.dataset.scene===sceneId)});
+  if(_smRenderer){_smRenderer.loadScene(_smNodes,_smEdges);_smRenderer.setState({},[])}
+  smRefreshTraffic();
+}
+
+async function smSwitchScene(sceneId){await smLoadScene(sceneId);toast('已切换场景: '+sceneId,'info')}
+
+async function smFindPath(){
+  var start=$('sm_start').value.trim(),goal=$('sm_goal').value.trim();
+  if(!start||!goal){toast('请设置起点和终点','warning');return}
+  _smStart=start;_smGoal=goal;
+  _smMode=$('sm_mode').value;_smAlgo=$('sm_algo').value;_smHeuristic=$('sm_heuristic').value;
+  var body={start:start,goal:goal,transport_mode:_smMode,algorithm:_smAlgo,heuristic:_smHeuristic,scene_id:_smSceneId};
+  var r=await api('/api/smart/path',{method:'POST',body:body});
+  if(!r.success){toast('寻路失败: '+r.message,'error');return}
+  var p=r.data.result;
+  $('sm_dist').textContent=p.total_distance.toFixed(0)+' m';
+  $('sm_visited').textContent=p.nodes_visited||0;
+  $('sm_time').textContent=(p.total_time||0).toFixed(1)+' s';
+  $('sm_cost').textContent='¥'+(p.total_cost||0).toFixed(2);
+  $('sm_path_len').textContent=p.path_length||0;
+  // Highlight on renderer
+  var state={};if(start)state[start]='start';if(goal)state[goal]='goal';
+  if(_smRenderer)_smRenderer.setState(state,p.path||[]);
+  // Show path steps
+  if(p.path_coords&&p.path_coords.length>0){
+    var stepsHtml='<div class="dir-step"><div class="dir-step-num">1</div><div class="dir-instruction"><b>起点:</b> '+esc(p.path_coords[0].name||start)+'</div></div>';
+    for(var i=1;i<p.path_coords.length;i++){var c=p.path_coords[i];stepsHtml+='<div class="dir-step"><div class="dir-step-num">'+(i+1)+'</div><div class="dir-instruction">'+esc(c.name||c.node_id)+(c.floor!==undefined?' <small class="text-muted">('+c.floor+'F)</small>':'')+'<div class="dir-meta">'+esc(c.node_id)+'</div></div></div>'}
+    $('sm_path_steps').innerHTML=stepsHtml;$('sm_path_detail').style.display='block';
+  }
+}
+
+async function smCompareAll(){
+  var start=$('sm_start').value.trim(),goal=$('sm_goal').value.trim();
+  if(!start||!goal){toast('请设置起点和终点','warning');return}
+  _smMode=$('sm_mode').value;
+  var r=await api('/api/smart/compare',{method:'POST',body:{start:start,goal:goal,transport_mode:_smMode,scene_id:_smSceneId}});
+  if(!r.success){toast('对比失败: '+r.message,'error');return}
+  // Build comparison table
+  var results=r.data.results||[],summary=r.data.summary||{};
+  var rows=results.map(function(p){return'<tr><td><b>'+esc(p.algorithm)+'</b></td><td>'+(p.total_distance||0).toFixed(0)+' m</td><td>'+(p.nodes_visited||0)+'</td><td>'+(p.execution_time_ms||0).toFixed(1)+' ms</td><td>'+(p.path_length||0)+'</td><td>'+(p.is_reachable?'<span class="badge badge-success">可达</span>':'<span class="badge badge-danger">不可达</span>')+'</td></tr>'}).join('');
+  $('sm_path_steps').innerHTML='<div class="table-responsive"><table class="table table-custom table-sm mb-0"><thead><tr><th>算法</th><th>距离</th><th>访问节点</th><th>耗时</th><th>路径长</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="mt-2 small text-secondary">最短距离: <b class="text-primary">'+(summary.shortest_distance||0).toFixed(0)+' m</b> | 最快: <b class="text-primary">'+(summary.fastest_path||0).toFixed(1)+' s</b> | 最少探索: <b class="text-primary">'+(summary.least_visited||0)+'</b></div>';
+  $('sm_path_detail').style.display='block';
+  // Highlight best path
+  var best=null;for(var i=0;i<results.length;i++){if(results[i].is_reachable&&(!best||results[i].total_distance<best.total_distance))best=results[i]}
+  if(best&&_smRenderer){var state={};state[start]='start';state[goal]='goal';_smRenderer.setState(state,best.path||[])}
+}
+
+async function smSearchNearby(){
+  var cat=$('sm_poi_cat').value,radius=$('sm_poi_radius').value;
+  var params='scene_id='+_smSceneId;
+  if(_smStart)params+='&center_node='+_smStart;
+  if(cat)params+='&categories='+cat;
+  if(radius)params+='&radius='+radius;
+  var r=await api('/api/smart/search/nearby?'+params);
+  if(!r.success){toast('搜索失败','error');return}
+  var results=r.data.results||[];
+  var html='';for(var i=0;i<results.length;i++){var p=results[i];html+='<div class="d-flex justify-content-between align-items-center mb-1" style="cursor:pointer" onclick="$(\'sm_goal\').value=\''+esc(p.node_id)+'\';_smGoal=\''+esc(p.node_id)+'\';toast(\'终点: '+esc(p.name)+'\',\'info\')"><span><span class="badge badge-accent me-1">'+esc(p.category_label||p.category)+'</span>'+esc(p.name)+'</span><span class="text-muted">'+p.distance.toFixed(0)+'m '+esc(p.direction||'')+'</span></div>'}$('sm_poi_results').innerHTML=html||'<p class="text-muted small">无结果</p>';
+  // Highlight POIs on map
+  if(_smRenderer&&results.length>0){var state={};for(var i=0;i<results.length;i++)state[results[i].node_id]='poi';if(_smStart)state[_smStart]='start';_smRenderer.setState(state,[])}
+}
+
+async function smRefreshTraffic(){
+  var r=await api('/api/smart/traffic');
+  if(!r.success)return;_smTrafficData=r.data;
+  var congested=r.data.congested_edges||0,blocked=r.data.blocked_edges||0;
+  $('sm_traffic_badge').textContent=congested+blocked;
+  $('sm_traffic_badge').className='badge ms-1 '+(blocked>0?'badge-danger':congested>0?'badge-warning':'badge-success');
+  var details=r.data.congested_details||[],blockages=r.data.blockages||[];
+  var html='';for(var i=0;i<blockages.length;i++){html+='<div class="mb-1"><span class="traffic-dot blocked"></span><b>阻塞:</b> '+esc(blockages[i].edge)+' <small class="text-muted">'+esc(blockages[i].desc||'')+'</small></div>'}$('sm_traffic_status').innerHTML=html||'<p class="text-muted small mb-0">无交通事件</p>';
+  if(_smRenderer)_smRenderer.setTraffic(r.data);
+}
+
+// ---- Vehicles ----
+async function smAddRandomVehicle(){
+  if(_smNodes.length<2){toast('节点不足','warning');return}
+  var idx1=Math.floor(Math.random()*_smNodes.length),idx2=Math.floor(Math.random()*_smNodes.length);
+  if(idx1===idx2)idx2=(idx1+1)%_smNodes.length;
+  var path=[_smNodes[idx1].node_id,_smNodes[idx2].node_id];
+  var vId='V'+(_smVehicles.length+1);
+  var r=await api('/api/smart/vehicles',{method:'POST',body:{vehicle_id:vId,name:'车辆 '+vId,route_path:path,speed_kmh:20+Math.random()*40}});
+  if(r.success){_smVehicles.push(r.data.vehicle);smRefreshVehicles();toast('车辆 '+vId+' 已添加','success')}
+  else toast('添加失败: '+r.message,'error');
+}
+
+async function smClearVehicles(){
+  for(var i=_smVehicles.length-1;i>=0;i--){await api('/api/smart/vehicles/'+_smVehicles[i].vehicle_id,{method:'DELETE'})}
+  _smVehicles=[];smRefreshVehicles();toast('车辆已清空','info');
+}
+
+function smRefreshVehicles(){
+  $('sm_veh_count').textContent=_smVehicles.length;
+  var html='';for(var i=0;i<_smVehicles.length;i++){var v=_smVehicles[i];html+='<div class="vehicle-row"><span><b>'+esc(v.vehicle_id)+'</b> <small class="text-muted">'+esc(v.name||'')+'</small></span><div class="vehicle-bar"><div class="vehicle-bar-fill" style="width:'+(v.progress_pct||0)+'%"></div></div><span class="text-muted small">'+(v.progress_pct||0).toFixed(0)+'%</span><span class="badge '+(v.status==='running'?'badge-success':'badge-warning')+'">'+esc(v.status)+'</span></div>'}$('sm_vehicle_list').innerHTML=html||'<p class="text-muted small mb-0">无车辆</p>';
+}
+
+// ---- Simulation ----
+var _smTrafficSimRunning=false,_smVehicleSimRunning=false;
+async function smTrafficSimToggle(){
+  if(_smTrafficSimRunning){await api('/api/smart/simulation/traffic/stop',{method:'POST'});_smTrafficSimRunning=false;$('sm_traffic_sim_btn').innerHTML='<i class="fa-solid fa-traffic-light me-1"></i>启动交通模拟';$('sm_traffic_sim_btn').className='btn btn-outline-warning btn-xs'}
+  else{await api('/api/smart/simulation/traffic/start',{method:'POST',body:{interval_ms:3000}});_smTrafficSimRunning=true;$('sm_traffic_sim_btn').innerHTML='<i class="fa-solid fa-stop me-1"></i>停止交通模拟';$('sm_traffic_sim_btn').className='btn btn-warning btn-xs'}
+}
+
+async function smVehicleSimToggle(){
+  if(_smVehicleSimRunning){await api('/api/smart/simulation/vehicle/stop',{method:'POST'});_smVehicleSimRunning=false;$('sm_vehicle_sim_btn').innerHTML='<i class="fa-solid fa-truck-fast me-1"></i>启动车辆模拟';$('sm_vehicle_sim_btn').className='btn btn-outline-info btn-xs'}
+  else{await api('/api/smart/simulation/vehicle/start',{method:'POST',body:{interval_ms:100,speed_scale:10}});_smVehicleSimRunning=true;$('sm_vehicle_sim_btn').innerHTML='<i class="fa-solid fa-stop me-1"></i>停止车辆模拟';$('sm_vehicle_sim_btn').className='btn btn-info btn-xs'}
+}
+
+// ---- Real-time Navigation ----
+var _smNavActive=false;
+async function smStartNavigation(){
+  if(!_smStart||!_smGoal){toast('请先设置起点和终点','warning');return}
+  _smMode=$('sm_mode').value;
+  // First find a path
+  var r=await api('/api/smart/path',{method:'POST',body:{start:_smStart,goal:_smGoal,transport_mode:_smMode,algorithm:_smAlgo,heuristic:_smHeuristic,scene_id:_smSceneId}});
+  if(!r.success||!r.data.result.is_reachable){toast('无法规划路径','error');return}
+  var path=r.data.result.path;
+  // Start navigation
+  var nr=await api('/api/smart/navigation/start',{method:'POST',body:{planned_path:path,goal_id:_smGoal,transport_mode:_smMode,scene_id:_smSceneId}});
+  if(!nr.success){toast('导航启动失败: '+nr.message,'error');return}
+  _smNavActive=true;$('sm_nav_start_btn').style.display='none';$('sm_nav_stop_btn').style.display='block';
+  toast('实时导航已启动! 目标: '+_smGoal,'success');
+}
+
+async function smStopNavigation(){
+  await api('/api/smart/navigation/stop',{method:'POST'});_smNavActive=false;
+  $('sm_nav_start_btn').style.display='block';$('sm_nav_stop_btn').style.display='none';
+  toast('导航已停止','info');
+}
+
+// ---- SSE ----
+function smConnectSSE(){
+  if(_smSSE){_smSSE.close();_smSSE=null}
+  _smSSE=new EventSource('/api/smart/navigation/stream');
+  _smSSE.addEventListener('init',function(e){var d=JSON.parse(e.data);$('sm_sse_dot').classList.add('connected');$('sm_sse_text').textContent='已连接';console.log('SSE init:',d)});
+  _smSSE.addEventListener('heartbeat',function(e){$('sm_sse_dot').classList.add('connected');$('sm_sse_text').textContent='已连接'});
+  _smSSE.addEventListener('traffic_update',function(e){var d=JSON.parse(e.data);_smTrafficData=d;smRefreshTrafficUI(d)});
+  _smSSE.addEventListener('vehicle_update',function(e){var d=JSON.parse(e.data);_smVehicles=d.vehicles||[];smRefreshVehicles();if(_smRenderer)_smRenderer.setVehicles(_smVehicles)});
+  _smSSE.addEventListener('navigation_update',function(e){var d=JSON.parse(e.data);if(d.progress)$('sm_path_len').textContent=d.progress.pct+'%'});
+  _smSSE.addEventListener('alert',function(e){var d=JSON.parse(e.data);_smAlerts.unshift(d);if(_smAlerts.length>20)_smAlerts=_smAlerts.slice(0,20);smRefreshAlerts()});
+  _smSSE.addEventListener('scene_changed',function(e){var d=JSON.parse(e.data);toast('场景切换: '+d.name,'info')});
+  _smSSE.addEventListener('navigation_started',function(e){_smNavActive=true;$('sm_nav_start_btn').style.display='none';$('sm_nav_stop_btn').style.display='block'});
+  _smSSE.addEventListener('navigation_stopped',function(e){_smNavActive=false;$('sm_nav_start_btn').style.display='block';$('sm_nav_stop_btn').style.display='none'});
+  _smSSE.onerror=function(){$('sm_sse_dot').classList.remove('connected');$('sm_sse_text').textContent='重连中...';setTimeout(function(){if(_smSSE&&_smSSE.readyState===EventSource.CLOSED)smConnectSSE()},3000)};
+  toast('SSE流已连接','success');
+}
+
+function smRefreshTrafficUI(d){
+  var congested=(d.congested_edges||0)+(d.blocked_edges||0);$('sm_traffic_badge').textContent=congested;
+  $('sm_traffic_badge').className='badge ms-1 '+(d.blocked_edges>0?'badge-danger':d.congested_edges>0?'badge-warning':'badge-success');
+  var blockages=d.blockages||[],html='';for(var i=0;i<blockages.length;i++)html+='<div class="mb-1"><span class="traffic-dot blocked"></span><b>阻塞:</b> '+esc(blockages[i].edge)+'</div>';
+  var congestedD=d.congested_details||[];for(var i=0;i<congestedD.length;i++)html+='<div class="mb-1"><span class="traffic-dot '+esc(congestedD[i].level)+'"></span>'+esc(congestedD[i].name||congestedD[i].from+'→'+congestedD[i].to)+' <small class="text-muted">'+esc(congestedD[i].label||'')+'</small></div>';
+  $('sm_traffic_status').innerHTML=html||'<p class="text-muted small mb-0">无交通事件</p>';
+  if(_smRenderer)_smRenderer.setTraffic(d);
+}
+
+function smRefreshAlerts(){
+  var html='';for(var i=0;i<Math.min(_smAlerts.length,10);i++){var a=_smAlerts[i];html+='<div class="alert-item '+esc(a.level||'info')+'"><b>'+esc(a.level||'')+'</b> '+esc(a.message||'')+'</div>'}$('sm_alerts').innerHTML=html||'<p class="text-muted small mb-0">无告警</p>';
 }
 
 /* ============================================================

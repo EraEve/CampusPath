@@ -1,6 +1,6 @@
 """Smart Navigation (智慧导航) — Application bootstrap.
 
-Initializes the core services and launches the tkinter GUI.
+Initializes the core services and launches the wxPython GUI.
 """
 
 import sys

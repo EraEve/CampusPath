@@ -1,12 +1,19 @@
-"""CampusPath Flask API Server.
+"""CampusPath + SmartNav Flask API Server.
 
-Provides 7 REST endpoints for the campus indoor navigation system:
-- Building metadata
-- Floor layouts (for Canvas rendering)
-- Single-path finding (any algorithm)
-- Multi-algorithm comparison
-- Batch experiment execution
-- Algorithm step data (for animation)
+Provides 56 REST endpoints + SSE stream across two route modules:
+
+Core campus indoor navigation (app.py — 22 endpoints):
+- Building metadata, floor layouts, node listings
+- Single-path finding (any algorithm), algorithm comparison, batch benchmarking
+- Algorithm step data (for animation), turn-by-turn directions
+- Room search & detail, graph statistics & validation
+- Accessible (wheelchair) routing with elevator wait simulation
+- Recent search history, metadata
+
+Smart Navigation (routes_smart.py — 34 endpoints):
+- Map/Scene management, POI search, traffic & congestion
+- Vehicle tracking, real-time navigation with SSE stream
+- Simulation control (traffic + vehicle), history, cross-scene node detail
 
 Usage:
     python backend/app.py
@@ -25,6 +32,7 @@ from flask_cors import CORS
 
 from backend.models.building import Building
 from backend.algorithms.a_star import HEURISTICS
+from backend.routes_smart import register_smart_routes
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -32,6 +40,9 @@ from backend.algorithms.a_star import HEURISTICS
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="")
 CORS(app)
+
+# Register Smart Navigation routes (Phase 3: 30+ REST endpoints + SSE)
+register_smart_routes(app)
 
 # Load the campus building map
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -880,12 +891,13 @@ def api_accessible_path():
 
 if __name__ == "__main__":
     print(f"\n{'='*60}")
-    print(f"  CampusPath API Server")
+    print(f"  CampusPath + SmartNav API Server")
     print(f"  Building: {building.name}")
     print(f"  Nodes: {building.graph.total_vertices}")
     print(f"  Edges: {building.graph.total_edges}")
     print(f"  Floors: {building.floors}")
     print(f"  URL: http://localhost:5001")
     print(f"  Frontend: http://localhost:5001/index.html")
+    print(f"  SmartNav APIs: /api/smart/* (30+ endpoints + SSE)")
     print(f"{'='*60}\n")
     app.run(debug=True, host="0.0.0.0", port=5001)
