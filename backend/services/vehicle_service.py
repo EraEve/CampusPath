@@ -128,9 +128,9 @@ class VehicleService:
             if curr_node is None or next_node is None:
                 break
 
-            # Distance to next node
-            dx = next_node.x - vehicle.x if vehicle.x > 0 else next_node.x - curr_node.x
-            dy = next_node.y - vehicle.y if vehicle.y > 0 else next_node.y - curr_node.y
+            # Distance to next node from vehicle's current interpolated position
+            dx = next_node.x - vehicle.x
+            dy = next_node.y - vehicle.y
             dist_to_next = (dx * dx + dy * dy) ** 0.5
 
             if dist_to_next <= 0:

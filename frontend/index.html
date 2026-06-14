@@ -1453,6 +1453,8 @@ class SmartNavRenderer{
     this.scaleX=1;this.scaleY=1;this.offsetX=0;this.offsetY=0;
     this.minX=0;this.minY=0;this.maxX=1000;this.maxY=600;
     this.hoveredNode=null;this.tooltipEl=null;
+    // Vehicle animation
+    this._vehAnim={prev:{},target:{},smoothed:{},animId:null,lastTime:0,active:false};
     this._resize();window.addEventListener('resize',()=>this._resize());
   }
   _resize(){
@@ -1481,7 +1483,25 @@ class SmartNavRenderer{
   }
   _toPixel(nx,ny){return{x:(nx-this.minX)*this.scaleX+this.offsetX,y:(ny-this.minY)*this.scaleY+this.offsetY}}
   setState(state,path){this.state=state||{};this.highlightPath=path||[];this.render()}
-  setVehicles(vehicles){this.vehicles=vehicles||[];this.render()}
+  setVehicles(vehicles){
+    var a=this._vehAnim;
+    // Save current smoothed positions as previous for interpolation
+    for(var i=0;i<vehicles.length;i++){
+      var v=vehicles[i],vid=v.vehicle_id;
+      a.target[vid]={x:v.x,y:v.y,name:v.name,vehicle_id:vid,
+        status:v.status,speed_kmh:v.speed_kmh,route_path:v.route_path,
+        current_position_index:v.current_position_index};
+      if(!a.smoothed[vid])a.smoothed[vid]={x:v.x,y:v.y};
+      a.prev[vid]={x:a.smoothed[vid].x,y:a.smoothed[vid].y};
+    }
+    // Clean up vehicles no longer present
+    var keep={};
+    for(var i=0;i<vehicles.length;i++)keep[vehicles[i].vehicle_id]=true;
+    for(var k in a.prev)if(!keep[k]){delete a.prev[k];delete a.target[k];delete a.smoothed[k]}
+    this.vehicles=vehicles;
+    if(vehicles.length>0)this._startAnimation();
+    else if(a.animId){cancelAnimationFrame(a.animId);a.animId=null;a.active=false}
+  }
   setTraffic(trafficData){this.trafficData=trafficData||{};this.render()}
   render(){
     var ctx=this.ctx;ctx.clearRect(0,0,this.viewW,this.viewH);
@@ -1540,14 +1560,95 @@ class SmartNavRenderer{
     ctx.stroke();ctx.shadowBlur=0;
   }
   _drawVehicles(){
-    for(var i=0;i<this.vehicles.length;i++){
-      var v=this.vehicles[i],ctx=this.ctx;
-      if(v.x===undefined||v.y===undefined)continue;
-      var p=this._toPixel(v.x,v.y);
-      ctx.fillStyle='#3b82f6';ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
-      ctx.fillStyle='#fff';ctx.font='bold 8px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
-      ctx.fillText(v.vehicle_id||v.name,p.x,p.y-14);
+    var a=this._vehAnim;var vehicleIds=Object.keys(a.smoothed);
+    var colors=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+    for(var i=0;i<vehicleIds.length;i++){
+      var vid=vehicleIds[i],s=a.smoothed[vid],t=a.target[vid];
+      if(!t)continue;
+      var p=this._toPixel(s.x,s.y),ctx=this.ctx;
+      var color=colors[i%colors.length];
+      var isRunning=t.status==='running';
+      var r=6,alpha=isRunning?1:0.5;
+      // ---- Route trail ----
+      if(t.route_path&&t.current_position_index>0){
+        ctx.strokeStyle='rgba(148,163,184,0.15)';ctx.lineWidth=2;ctx.setLineDash([3,6]);
+        ctx.beginPath();var started=false;
+        for(var j=0;j<=t.current_position_index&&j<t.route_path.length;j++){
+          var tn=this.nodeMap[t.route_path[j]];if(!tn)continue;
+          var tp=this._toPixel(tn.x,tn.y);
+          if(!started){ctx.moveTo(tp.x,tp.y);started=true}else ctx.lineTo(tp.x,tp.y);
+        }
+        if(started){ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([])}
+      }
+      // ---- Direction cone ----
+      if(isRunning&&t.route_path&&t.current_position_index+1<t.route_path.length){
+        var nnid=t.route_path[t.current_position_index+1],nn=this.nodeMap[nnid];
+        if(nn){
+          var np=this._toPixel(nn.x,nn.y),dx=np.x-p.x,dy=np.y-p.y,dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist>1){dx/=dist;dy/=dist}
+          // Draw direction arrow
+          ctx.fillStyle=color;ctx.beginPath();
+          var tipX=p.x+dx*(r+6),tipY=p.y+dy*(r+6);
+          ctx.moveTo(tipX,tipY);
+          ctx.lineTo(tipX-dx*8-dy*3.5,tipY-dy*8+dx*3.5);
+          ctx.lineTo(tipX-dx*8+dy*3.5,tipY-dy*8-dx*3.5);
+          ctx.closePath();ctx.fill();
+        }
+      }
+      // ---- Vehicle body ----
+      ctx.globalAlpha=alpha;ctx.fillStyle=color;
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.8;ctx.stroke();
+      ctx.globalAlpha=1;
+      // ---- Status ring ----
+      if(isRunning){
+        ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();
+      }else{
+        ctx.strokeStyle='rgba(148,163,184,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      }
+      // ---- Label ----
+      var label=(t.name||vid).length>6?(t.name||vid).slice(0,5)+'…':(t.name||vid);
+      ctx.fillStyle='#e2e8f0';ctx.font='bold 9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(label,p.x,p.y-r-9);
+      // Speed badge
+      if(isRunning){
+        var speedText=Math.round(t.speed_kmh||0)+'km/h';
+        ctx.fillStyle='rgba(15,23,42,0.85)';var tw=ctx.measureText(speedText).width+8;
+        ctx.fillRect(p.x-tw/2,p.y+r+6,tw,14);
+        ctx.fillStyle='#94a3b8';ctx.font='8px "Microsoft YaHei",Arial,sans-serif';
+        ctx.fillText(speedText,p.x,p.y+r+17);
+      }
+    }
+  }
+  _startAnimation(){
+    var a=this._vehAnim;if(a.animId)return;a.active=true;a.lastTime=0;
+    var self=this;
+    function step(now){
+      if(!self._vehAnim.active){self._vehAnim.animId=null;return}
+      var dt=a.lastTime?(now-a.lastTime)/1000:0.016;
+      a.lastTime=now;self._interpolateVehicles(dt);
+      var hasActive=false;
+      for(var k in a.target)if(a.target[k].status==='running'){hasActive=true;break}
+      if(hasActive||Object.keys(a.target).length>0)self.render();
+      // Stop if no vehicles and all converged
+      var allDone=Object.keys(a.target).length===0;
+      for(var k in a.smoothed){var s=a.smoothed[k],t=a.target[k];if(t){var dx=Math.abs(s.x-t.x),dy=Math.abs(s.y-t.y);if(dx>0.1||dy>0.1)allDone=false}}
+      if(allDone&&!hasActive){self._vehAnim.animId=null;self._vehAnim.active=false;self.render();return}
+      self._vehAnim.animId=requestAnimationFrame(step);
+    }
+    this._vehAnim.animId=requestAnimationFrame(step);
+  }
+  _interpolateVehicles(dt){
+    var a=this._vehAnim,factor=Math.min(dt*8,0.5); // smoothing factor
+    for(var k in a.target){
+      var t=a.target[k],s=a.smoothed[k];if(!s)continue;
+      if(t.status==='running'){
+        s.x+=(t.x-s.x)*factor;s.y+=(t.y-s.y)*factor;
+      }else{
+        // Stopped vehicles converge faster
+        s.x+=(t.x-s.x)*factor*2;s.y+=(t.y-s.y)*factor*2;
+      }
     }
   }
   hitTest(mx,my){
@@ -1762,18 +1863,22 @@ async function smAddRandomVehicle(){
   var path=[_smNodes[idx1].node_id,_smNodes[idx2].node_id];
   var vId='V'+(_smVehicles.length+1);
   var r=await api('/api/smart/vehicles',{method:'POST',body:{vehicle_id:vId,name:'车辆 '+vId,route_path:path,speed_kmh:20+Math.random()*40}});
-  if(r.success){_smVehicles.push(r.data.vehicle);smRefreshVehicles();toast('车辆 '+vId+' 已添加','success')}
+  if(r.success){_smVehicles.push(r.data.vehicle);smRefreshVehicles();smRefreshVehiclesCanvas();toast('车辆 '+vId+' 已添加','success')}
   else toast('添加失败: '+r.message,'error');
 }
 
 async function smClearVehicles(){
   for(var i=_smVehicles.length-1;i>=0;i--){await api('/api/smart/vehicles/'+_smVehicles[i].vehicle_id,{method:'DELETE'})}
-  _smVehicles=[];smRefreshVehicles();toast('车辆已清空','info');
+  _smVehicles=[];smRefreshVehicles();smRefreshVehiclesCanvas();toast('车辆已清空','info');
 }
 
 function smRefreshVehicles(){
   $('sm_veh_count').textContent=_smVehicles.length;
   var html='';for(var i=0;i<_smVehicles.length;i++){var v=_smVehicles[i];html+='<div class="vehicle-row"><span><b>'+esc(v.vehicle_id)+'</b> <small class="text-muted">'+esc(v.name||'')+'</small></span><div class="vehicle-bar"><div class="vehicle-bar-fill" style="width:'+(v.progress_pct||0)+'%"></div></div><span class="text-muted small">'+(v.progress_pct||0).toFixed(0)+'%</span><span class="badge '+(v.status==='running'?'badge-success':'badge-warning')+'">'+esc(v.status)+'</span></div>'}$('sm_vehicle_list').innerHTML=html||'<p class="text-muted small mb-0">无车辆</p>';
+}
+
+function smRefreshVehiclesCanvas(){
+  if(_smRenderer)_smRenderer.setVehicles(_smVehicles);
 }
 
 // ---- Simulation ----
