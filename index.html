@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧导航 Smart Navigation — CampusPath</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;
+    background:#0f172a;color:#e2e8f0;min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .container{max-width:720px;text-align:center;padding:40px 20px}
+  h1{font-size:2.5rem;margin-bottom:8px;background:linear-gradient(135deg,#06b6d4,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .subtitle{color:#94a3b8;font-size:1.1rem;margin-bottom:32px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+  @media(max-width:520px){.cards{grid-template-columns:1fr}}
+  .card{
+    background:rgba(30,41,59,0.7);border:1px solid rgba(148,163,184,0.15);
+    border-radius:16px;padding:24px 20px;text-align:left;
+    transition:border-color 0.2s,transform 0.2s;
+  }
+  .card:hover{border-color:rgba(6,182,212,0.5);transform:translateY(-2px)}
+  .card h3{font-size:1.1rem;margin-bottom:8px;color:#f1f5f9}
+  .card p{font-size:0.9rem;color:#94a3b8;line-height:1.5;margin-bottom:12px}
+  .card .tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+  .card .tag{
+    font-size:0.7rem;padding:2px 8px;border-radius:10px;
+    background:rgba(6,182,212,0.15);color:#67e8f9;
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:10px 24px;border-radius:10px;font-size:0.95rem;
+    font-weight:600;text-decoration:none;transition:all 0.2s;
+    cursor:pointer;border:none;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#0891b2,#06b6d4);
+    color:#fff;box-shadow:0 4px 16px rgba(6,182,212,0.25);
+  }
+  .btn-primary:hover{box-shadow:0 4px 24px rgba(6,182,212,0.45);transform:translateY(-1px)}
+  .btn-outline{
+    background:transparent;border:1px solid rgba(148,163,184,0.3);
+    color:#94a3b8;
+  }
+  .btn-outline:hover{border-color:#06b6d4;color:#e2e8f0}
+  .btn-sm{padding:6px 14px;font-size:0.8rem}
+  .status-bar{
+    display:flex;align-items:center;justify-content:center;gap:24px;
+    margin-bottom:24px;flex-wrap:wrap;
+  }
+  .status-item{display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#94a3b8}
+  .status-dot{width:8px;height:8px;border-radius:50%}
+  .status-dot.green{background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.5)}
+  .footer{margin-top:32px;font-size:0.8rem;color:#475569}
+  .footer a{color:#06b6d4;text-decoration:none}
+  .divider{width:60px;height:3px;background:linear-gradient(90deg,#06b6d4,#8b5cf6);border-radius:2px;margin:0 auto 24px}
+  .btn-group{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>智慧导航</h1>
+  <p class="subtitle">Smart Navigation · 多场景智能路径导航系统</p>
+  <div class="divider"></div>
+
+  <div class="status-bar">
+    <div class="status-item"><span class="status-dot green"></span> 105/105 tests pass</div>
+    <div class="status-item">🎯 4 地图场景</div>
+    <div class="status-item">🔍 8 种算法</div>
+    <div class="status-item">🚗 5 出行模式</div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>🌐 Web 演示</h3>
+      <p>Canvas 科技风界面，缩放平移、楼层切换、实时交通、车辆动画、SSE 流</p>
+      <div class="tags">
+        <span class="tag">57 API 端点</span>
+        <span class="tag">SPA</span>
+        <span class="tag">Flask</span>
+        <span class="tag">SSE</span>
+      </div>
+      <a class="btn btn-primary" href="frontend/index.html">
+        🚀 打开 Web 界面
+      </a>
+      <p style="font-size:0.75rem;color:#64748b;margin-top:8px">
+        ⚠ API 需要本地运行 <code>python backend/app.py</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>🖥 桌面版</h3>
+      <p>wxPython 全功能桌面应用，6 大标签页，独立运行无需服务器</p>
+      <div class="tags">
+        <span class="tag">wxPython</span>
+        <span class="tag">6 标签页</span>
+        <span class="tag">4 地图</span>
+      </div>
+      <a class="btn btn-outline" href="https://github.com/EraEve/CampusPath">
+        📂 GitHub 仓库
+      </a>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <a class="btn btn-outline btn-sm" href="frontend/index.html">🧭 智慧导航页面</a>
+    <a class="btn btn-outline btn-sm" href="https://github.com/EraEve/CampusPath">⭐ GitHub</a>
+  </div>
+
+  <p class="footer" style="margin-top:24px">
+    <b>本地运行:</b> <code>git clone git@github.com:EraEve/CampusPath.git</code> →
+    <code>pip install -r requirements.txt</code> →
+    <code>python backend/app.py</code> →
+    <a href="http://localhost:5001">http://localhost:5001</a>
+  </p>
+
+  <p class="footer" style="margin-top:40px">
+    © 2026 <a href="https://github.com/EraEve">EraEve</a> ·
+    CampusPath Smart Navigation ·
+    <a href="https://github.com/EraEve/CampusPath">Source</a>
+  </p>
+</div>
+</body>
+</html>
