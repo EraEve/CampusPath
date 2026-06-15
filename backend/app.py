@@ -890,6 +890,9 @@ def api_accessible_path():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import webbrowser
+    import threading
+
     print(f"\n{'='*60}")
     print(f"  CampusPath + SmartNav API Server")
     print(f"  Building: {building.name}")
@@ -900,4 +903,12 @@ if __name__ == "__main__":
     print(f"  Frontend: http://localhost:5001/app.html")
     print(f"  SmartNav APIs: /api/smart/* (30+ endpoints + SSE)")
     print(f"{'='*60}\n")
+
+    def _open_browser():
+        """Open browser after a short delay to let Flask start."""
+        import time
+        time.sleep(1.2)
+        webbrowser.open("http://localhost:5001")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
     app.run(debug=True, host="0.0.0.0", port=5001)
