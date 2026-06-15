@@ -593,6 +593,7 @@ function renderDashboard(){
 }
 
 async function loadDashboard(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var results=await Promise.all([api('/api/building'),api('/api/building/stats'),api('/api/recent')]);
   var bInfo=results[0],sInfo=results[1],recentR=results[2];
   var stats=sInfo.success?sInfo.data:{};
@@ -761,6 +762,7 @@ function selectSearchItem(which,nid){
 }
 
 async function initNavigate(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var r=await api('/api/building/all-nodes');
   if(!r.success){toast('加载节点失败: '+r.message,'error');return}
   _allNodes=(r.data.nodes||[]).sort(function(a,b){return a.floor!==b.floor?a.floor-b.floor:a.node_id.localeCompare(b.node_id)});
@@ -965,6 +967,7 @@ function toggleDirSort(){
 }
 
 async function loadDirectory(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var q=$('dir_search').value||'',f=$('dir_floor').value||'',t=$('dir_type').value||'';
   var params=new URLSearchParams();if(q)params.set('q',q);if(f)params.set('floor',f);if(t)params.set('type',t);
   var r=await api('/api/rooms/search?'+params.toString());
@@ -1061,6 +1064,7 @@ function renderBenchmark(){
 }
 
 async function loadBenchmark(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var r=await api('/api/building/all-nodes');if(!r.success)return;
   var nodes=(r.data.nodes||[]).sort(function(a,b){return a.node_id.localeCompare(b.node_id)});
   var opt='<option value="">-- 选择 --</option>';
@@ -1189,6 +1193,7 @@ function renderAccessible(){
 var _acRenderer=null,_acFloor=1,_acAllNodes=[];
 
 async function initAccessible(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var r=await api('/api/building/all-nodes');if(!r.success)return;
   _acAllNodes=(r.data.nodes||[]).sort(function(a,b){return a.node_id.localeCompare(b.node_id)});
   var opt='<option value="">-- 选择 --</option>';
@@ -1278,6 +1283,7 @@ function renderValidate(){
 }
 
 async function loadValidate(){
+  if(_isGitHubPages){_showDemoBanner();return}
   var results=await Promise.all([api('/api/building/validate'),api('/api/building/stats'),api('/api/building/degree-distribution'),api('/api/building/isolated-nodes')]);
   var v=results[0].success?results[0].data:{},s=results[1].success?results[1].data:{};
   var ddist=results[2].success?results[2].data:{},isonodes=results[3].success?results[3].data:{};
@@ -2380,7 +2386,18 @@ class AlgorithmAnimator{
 /* ============================================================
    INIT
    ============================================================ */
+var _isGitHubPages=window.location.hostname.includes('github.io');
+var _demoBannerShown=false;
+function _showDemoBanner(){
+  if(_demoBannerShown)return;_demoBannerShown=true;
+  var banner='<div class="alert alert-warning border-0 rounded-3 mb-3 mx-3 mt-2" style="background:rgba(245,158,11,0.12);color:#fbbf24">'+
+    '<i class="fa-solid fa-triangle-exclamation me-2"></i><b>演示模式</b> — 当前运行在 GitHub Pages，无后端API支持。'+
+    ' 请 <a href="https://github.com/EraEve/CampusPath" target="_blank" style="color:#67e8f9">克隆仓库</a> 并运行 <code style="color:#e2e8f0">python backend/app.py</code> 获得完整体验。'+
+    ' <a href="index.html" style="color:#67e8f9">← 返回首页</a></div>';
+  var pa=$('page_area');if(pa){var tmp=pa.innerHTML;pa.innerHTML=banner+tmp}
+}
 (function init(){
+    if(_isGitHubPages)_showDemoBanner();
     buildNavTabs();renderPage('dashboard');
     setInterval(function(){var el=$('top_time');if(el)el.textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})},10000);
     // Close search dropdowns on outside click
