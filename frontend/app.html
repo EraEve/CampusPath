@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusPath · 智慧校园室内导航</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<style>
+/* ============================================================
+   CampusPath v2.0 — Dark Sci-Fi Design System
+   ============================================================ */
+:root {
+  --bg-deep: #0a0e27;
+  --bg-mid: #141832;
+  --bg-card: rgba(255,255,255,0.04);
+  --bg-card-hover: rgba(255,255,255,0.07);
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-glow: rgba(59,130,246,0.25);
+  --primary: #3b82f6;
+  --primary-glow: rgba(59,130,246,0.35);
+  --accent: #06b6d4;
+  --accent-glow: rgba(6,182,212,0.3);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accessible: #22c55e;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  font-family:"Microsoft YaHei",Arial,sans-serif;
+  background:linear-gradient(135deg,#0a0e27 0%,#101530 35%,#141832 65%,#1a1f3a 100%);
+  background-attachment:fixed;
+  color:var(--text-primary);
+}
+.hidden{display:none!important}
+
+/* ---- Navbar ---- */
+.topbar{
+  background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6);
+  color:#fff;box-shadow:0 4px 30px rgba(59,130,246,0.3);
+  position:sticky;top:0;z-index:1050;
+}
+.topbar .navbar-brand{font-weight:700;font-size:1.15rem;letter-spacing:0.5px}
+.topbar .nav-link{
+  color:rgba(255,255,255,0.85);border-radius:10px;
+  padding:6px 13px;font-size:13px;white-space:nowrap;
+  transition:all 0.2s;
+}
+.topbar .nav-link:hover,.topbar .nav-link.active{
+  color:#fff;background:rgba(255,255,255,0.16);
+  box-shadow:0 0 12px rgba(255,255,255,0.08);
+}
+
+/* ---- Cards ---- */
+.card-custom{
+  background:var(--bg-card);backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--border-subtle);border-radius:20px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.35);margin-bottom:20px;
+  transition:border-color 0.3s,box-shadow 0.3s;
+}
+.card-custom:hover{border-color:var(--border-glow);box-shadow:0 8px 40px rgba(59,130,246,0.12)}
+.card-custom .card-header{
+  background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border-subtle);
+  color:var(--text-primary);font-weight:600;border-radius:20px 20px 0 0!important;padding:14px 20px;
+}
+.card-custom .card-body{padding:20px}
+
+/* ---- Stat Cards ---- */
+.stat-card{
+  background:var(--bg-card);backdrop-filter:blur(12px);
+  border:1px solid var(--border-subtle);border-radius:18px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  transition:all 0.3s ease;cursor:default;overflow:hidden;
+}
+.stat-card:hover{
+  transform:translateY(-4px);border-color:var(--border-glow);
+  box-shadow:0 12px 40px var(--primary-glow);
+}
+.stat-icon{
+  width:46px;height:46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(6,182,212,0.15));
+  color:var(--primary);
+}
+.stat-label{font-size:12px;color:var(--text-muted);margin-top:8px}
+.stat-value{font-size:26px;font-weight:800;color:var(--text-primary)}
+
+/* ---- Buttons ---- */
+.btn-rounded{border-radius:12px;font-weight:600;padding:8px 20px;min-height:42px;transition:all 0.25s}
+.btn-primary{
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+  border:none;box-shadow:0 4px 16px rgba(59,130,246,0.3);
+}
+.btn-primary:hover{
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);
+  box-shadow:0 6px 24px rgba(59,130,246,0.45);transform:translateY(-1px);
+}
+.btn-accent{
+  background:linear-gradient(135deg,#0891b2,#06b6d4);border:none;color:#fff;
+  box-shadow:0 4px 16px rgba(6,182,212,0.25);
+}
+.btn-accent:hover{box-shadow:0 6px 24px rgba(6,182,212,0.4);color:#fff}
+.btn-success-accessible{
+  background:linear-gradient(135deg,#16a34a,#22c55e);border:none;color:#fff;
+  box-shadow:0 4px 16px rgba(34,197,94,0.25);
+}
+.btn-success-accessible:hover{box-shadow:0 6px 24px rgba(34,197,94,0.4);color:#fff}
+.btn-xs{padding:4px 10px;font-size:11px;border-radius:8px;min-height:28px}
+
+/* ---- Tables ---- */
+.table-custom{color:var(--text-primary)}
+.table-custom thead th{
+  background:rgba(59,130,246,0.08);color:var(--primary);
+  font-size:12px;text-transform:uppercase;letter-spacing:0.5px;
+  border-bottom:2px solid var(--border-glow);
+}
+.table-custom tbody td{vertical-align:middle;font-size:13px;border-color:var(--border-subtle)}
+.table-custom tbody tr{transition:background 0.2s}
+.table-custom tbody tr:hover{background:var(--bg-card-hover)}
+
+/* ---- Form controls ---- */
+.form-control,.form-select{
+  background:rgba(255,255,255,0.06);border:1px solid var(--border-subtle);
+  color:var(--text-primary);border-radius:10px;font-size:13px;min-height:42px;
+  transition:all 0.2s;
+}
+.form-control:focus,.form-select:focus{
+  background:rgba(255,255,255,0.08);border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(59,130,246,0.15);color:var(--text-primary);
+}
+.form-control::placeholder{color:var(--text-muted)}
+.form-select option{background:#1a1f3a;color:var(--text-primary)}
+.form-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px;font-weight:500}
+.form-range::-webkit-slider-runnable-track{background:rgba(59,130,246,0.2);border-radius:10px}
+.form-range::-webkit-slider-thumb{background:var(--primary);box-shadow:0 0 10px var(--primary-glow)}
+
+/* ---- Badges ---- */
+.badge-primary{background:rgba(59,130,246,0.18);color:#93c5fd}
+.badge-success{background:rgba(16,185,129,0.18);color:#6ee7b7}
+.badge-warning{background:rgba(245,158,11,0.18);color:#fcd34d}
+.badge-danger{background:rgba(239,68,68,0.18);color:#fca5a5}
+.badge-accent{background:rgba(6,182,212,0.18);color:#67e8f9}
+.badge-accessible{background:rgba(34,197,94,0.18);color:#86efac}
+
+/* ---- Animations ---- */
+.page-section{animation:fadeSlideIn 0.3s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---- Canvas ---- */
+.canvas-wrap{
+  background:rgba(0,0,0,0.25);border-radius:16px;
+  border:1px solid var(--border-subtle);overflow:hidden;position:relative;
+}
+.canvas-wrap canvas{display:block}
+
+/* ---- Info bar ---- */
+.info-bar{
+  background:rgba(0,0,0,0.3);border:1px solid var(--border-subtle);
+  border-radius:12px;padding:10px 18px;display:flex;gap:24px;flex-wrap:wrap;
+  font-size:12px;color:var(--text-secondary);
+}
+.info-bar .val{color:var(--text-primary);font-weight:600}
+
+/* ---- Direction steps ---- */
+.dir-step{
+  display:flex;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border-subtle);align-items:flex-start;
+}
+.dir-step:last-child{border-bottom:none}
+.dir-step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;
+}
+.dir-step-num.arrive{background:linear-gradient(135deg,#059669,#10b981)}
+.dir-step-num.elevator{background:linear-gradient(135deg,#0891b2,#06b6d4)}
+.dir-step-num.stairs{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.dir-step-num.accessible{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.dir-instruction{font-size:13px;color:var(--text-primary);line-height:1.5}
+.dir-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* ---- Toast ---- */
+.toast-wrap{
+  position:fixed;top:80px;right:24px;z-index:9999;
+  display:flex;flex-direction:column;gap:8px;max-width:380px;
+}
+.toast-msg{
+  background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);
+  border:1px solid var(--border-subtle);border-radius:14px;
+  padding:12px 18px;font-size:13px;color:var(--text-primary);
+  box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  animation:slideInRight 0.3s ease;display:flex;align-items:center;gap:10px;
+}
+@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.toast-msg.error{border-left:3px solid var(--danger)}
+.toast-msg.success{border-left:3px solid var(--success)}
+.toast-msg.info{border-left:3px solid var(--primary)}
+
+/* ---- Floor tabs ---- */
+.floor-tab{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:10px;
+  border:1px solid var(--border-subtle);background:var(--bg-card);
+  color:var(--text-secondary);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;margin:2px;
+}
+.floor-tab:hover{border-color:var(--primary);color:var(--primary)}
+.floor-tab.active{
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+  border-color:var(--primary);color:#fff;box-shadow:0 0 16px var(--primary-glow);
+}
+
+/* ---- SmartNav Scene Tabs ---- */
+.scene-tab{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:10px;
+  border:1px solid var(--border-subtle);background:var(--bg-card);
+  color:var(--text-secondary);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;margin:2px;
+}
+.scene-tab:hover{border-color:var(--accent);color:var(--accent)}
+.scene-tab.active{
+  background:linear-gradient(135deg,#0891b2,#06b6d4);
+  border-color:var(--accent);color:#fff;box-shadow:0 0 16px var(--accent-glow);
+}
+.scene-tab .scene-badge{font-size:10px;opacity:0.8}
+
+/* ---- SmartNav Sidebar ---- */
+.sm-sidebar{max-height:calc(100vh - 160px);overflow-y:auto;padding-right:4px}
+.sm-sidebar::-webkit-scrollbar{width:4px}
+.sm-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+
+/* ---- SmartNav traffic indicators ---- */
+.traffic-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.traffic-dot.normal{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,0.5)}
+.traffic-dot.moderate{background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.5)}
+.traffic-dot.heavy{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,0.5)}
+.traffic-dot.blocked{background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.5)}
+
+/* ---- Vehicle row ---- */
+.vehicle-row{
+  display:flex;align-items:center;gap:10px;padding:8px 0;
+  border-bottom:1px solid var(--border-subtle);font-size:13px;
+}
+.vehicle-row:last-child{border-bottom:none}
+.vehicle-bar{
+  flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;
+}
+.vehicle-bar-fill{
+  height:100%;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:3px;
+  transition:width 0.3s;
+}
+
+/* ---- SSE indicator ---- */
+.sse-indicator{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.sse-dot{width:8px;height:8px;border-radius:50%;background:#64748b}
+.sse-dot.connected{background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.6);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ---- SmartNav alert list ---- */
+.alert-list{max-height:200px;overflow-y:auto;font-size:12px}
+.alert-item{padding:6px 10px;border-radius:8px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.alert-item.info{background:rgba(59,130,246,0.1);border-left:2px solid var(--primary)}
+.alert-item.warning{background:rgba(245,158,11,0.1);border-left:2px solid var(--warning)}
+.alert-item.danger{background:rgba(239,68,68,0.1);border-left:2px solid var(--danger)}
+.alert-item.success{background:rgba(16,185,129,0.1);border-left:2px solid var(--success)}
+
+/* ---- Canvas tooltip ---- */
+.canvas-tooltip{
+  position:absolute;background:rgba(15,23,42,0.95);border:1px solid var(--border-glow);
+  border-radius:10px;padding:8px 12px;font-size:12px;color:var(--text-primary);
+  pointer-events:none;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  white-space:nowrap;display:none;
+}
+
+/* ---- Floor buttons (Phase E) ---- */
+.floor-btns{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  display:flex;gap:4px;z-index:50;background:rgba(15,23,42,0.85);
+  padding:4px 8px;border-radius:20px;border:1px solid var(--border-subtle);
+}
+.floor-btns .btn-xs{padding:2px 8px;font-size:10px;border-radius:12px}
+
+/* ---- Zoom reset button (Phase D5) ---- */
+.zoom-reset-btn{
+  position:absolute;bottom:12px;right:12px;z-index:50;
+  background:rgba(15,23,42,0.8);border:1px solid var(--border-subtle);
+  color:#94a3b8;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;transition:all 0.2s;
+}
+.zoom-reset-btn:hover{color:#e2e8f0;border-color:var(--accent);background:rgba(8,145,178,0.2)}
+
+/* ---- Legend toggle button (Phase F2) ---- */
+.legend-toggle-btn{
+  position:absolute;top:12px;right:12px;z-index:50;
+  background:rgba(15,23,42,0.8);border:1px solid var(--border-subtle);
+  color:#94a3b8;width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:13px;transition:all 0.2s;
+}
+.legend-toggle-btn:hover{color:#e2e8f0;border-color:var(--accent);background:rgba(8,145,178,0.2)}
+
+/* ---- Legend overlay (Phase F2) ---- */
+.legend-overlay{
+  position:absolute;top:50px;right:12px;z-index:99;
+  background:rgba(15,23,42,0.95);border:1px solid var(--border-glow);
+  border-radius:12px;padding:10px 14px;min-width:180px;
+  font-size:11px;color:var(--text-primary);box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+.legend-title{
+  font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;
+}
+.legend-close{background:none;border:none;color:#94a3b8;cursor:pointer;padding:0 4px;font-size:14px}
+.legend-section{margin-bottom:6px}
+.legend-section b{font-size:10px;color:var(--text-secondary);display:block;margin-bottom:2px}
+.legend-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-line{width:24px;border-radius:1px;flex-shrink:0}
+.floor-tab.all-floors{padding:0 12px;width:auto;font-size:11px}
+
+/* ---- Quick Action ---- */
+.quick-action{
+  display:flex;align-items:center;gap:10px;padding:12px 18px;
+  border-radius:14px;background:var(--bg-card);
+  border:1px solid var(--border-subtle);color:var(--text-primary);
+  font-size:13px;font-weight:500;cursor:pointer;
+  transition:all 0.25s;text-decoration:none;
+}
+.quick-action:hover{
+  background:var(--bg-card-hover);border-color:var(--border-glow);
+  box-shadow:0 4px 20px rgba(59,130,246,0.12);
+  transform:translateY(-2px);color:var(--text-primary);
+}
+.quick-action i{font-size:20px;color:var(--primary)}
+
+/* ---- Benchmark ---- */
+.best-val{color:var(--success);font-weight:700}
+
+/* ---- Mini card ---- */
+.dash-card-mini{
+  border:1px solid var(--border-subtle);border-radius:12px;
+  padding:10px 14px;margin-bottom:8px;transition:box-shadow 0.15s;
+}
+.dash-card-mini:hover{box-shadow:0 2px 8px rgba(59,130,246,0.15)}
+.dash-card-mini:last-child{margin-bottom:0}
+
+/* ---- Accordion ---- */
+.accordion-custom .accordion-item{
+  background:var(--bg-card);border:1px solid var(--border-subtle);
+  border-radius:14px!important;margin-bottom:8px;overflow:hidden;
+}
+.accordion-custom .accordion-button{
+  background:rgba(255,255,255,0.03);color:var(--text-primary);
+  font-weight:600;font-size:14px;box-shadow:none;border-radius:14px!important;
+}
+.accordion-custom .accordion-button:not(.collapsed){
+  background:rgba(59,130,246,0.08);color:var(--primary);
+}
+.accordion-custom .accordion-button::after{filter:invert(0.6)}
+.accordion-custom .accordion-body{color:var(--text-secondary);font-size:13px;line-height:1.7}
+
+/* ---- Search Autocomplete (NEW) ---- */
+.search-wrap{position:relative}
+.search-wrap .search-dropdown{
+  position:absolute;top:100%;left:0;right:0;z-index:1000;
+  max-height:260px;overflow-y:auto;
+  background:rgba(15,23,42,0.98);backdrop-filter:blur(20px);
+  border:1px solid var(--border-glow);border-radius:0 0 12px 12px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);
+}
+.search-wrap .search-item{
+  padding:8px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border-subtle);
+  display:flex;justify-content:space-between;align-items:center;
+  transition:background 0.15s;
+}
+.search-wrap .search-item:hover,.search-wrap .search-item.active{background:rgba(59,130,246,0.12)}
+.search-wrap .search-item:last-child{border-bottom:none}
+.search-wrap .search-item .si-name{color:var(--text-primary);font-weight:500}
+.search-wrap .search-item .si-id{color:var(--text-muted);font-size:11px}
+.search-wrap .search-item .si-floor{font-size:10px}
+
+/* ---- Animation Controls (NEW) ---- */
+.anim-ctrl{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 14px;background:rgba(0,0,0,0.2);border-radius:12px;
+  border:1px solid var(--border-subtle);
+}
+.anim-ctrl button{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--border-subtle);
+  background:var(--bg-card);color:var(--text-primary);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  transition:all 0.15s;
+}
+.anim-ctrl button:hover{background:var(--bg-card-hover);border-color:var(--primary)}
+.anim-ctrl button.active-btn{background:var(--primary);border-color:var(--primary);color:#fff}
+.anim-ctrl .speed-label{font-size:11px;color:var(--text-muted);white-space:nowrap}
+.anim-ctrl input[type=range]{width:80px}
+
+/* ---- Multi-Floor Canvas (NEW) ---- */
+.multi-floor-wrap{position:relative;overflow-y:auto;max-height:600px}
+.multi-floor-wrap .floor-label-strip{
+  position:sticky;top:0;z-index:10;background:rgba(15,23,42,0.95);
+  border-bottom:1px solid var(--border-subtle);padding:6px 14px;
+  font-size:12px;font-weight:600;color:var(--primary);
+  display:flex;justify-content:space-between;align-items:center;
+}
+
+/* ---- Room Detail Modal (NEW) ---- */
+.modal-dark .modal-content{
+  background:rgba(15,23,42,0.98);backdrop-filter:blur(20px);
+  border:1px solid var(--border-glow);border-radius:20px;
+  color:var(--text-primary);
+}
+.modal-dark .modal-header{border-bottom:1px solid var(--border-subtle)}
+.modal-dark .modal-footer{border-top:1px solid var(--border-subtle)}
+.modal-dark .btn-close{filter:invert(0.8)}
+.room-feature-tag{
+  display:inline-block;padding:3px 10px;margin:2px;border-radius:20px;
+  font-size:11px;background:rgba(59,130,246,0.12);color:#93c5fd;
+  border:1px solid rgba(59,130,246,0.2);
+}
+
+/* ---- Pseudocode (NEW) ---- */
+.pseudo-block{
+  background:rgba(0,0,0,0.3);border:1px solid var(--border-subtle);
+  border-radius:14px;padding:16px 20px;margin:10px 0;
+  font-family:"Cascadia Code","Fira Code","Consolas",monospace;
+  font-size:12px;line-height:1.8;color:var(--text-secondary);
+  overflow-x:auto;white-space:pre;
+}
+.pseudo-block .kw{color:#93c5fd}
+.pseudo-block .fn{color:#67e8f9}
+.pseudo-block .cm{color:var(--text-muted);font-style:italic}
+.pseudo-block .str{color:#6ee7b7}
+.pseudo-block .num{color:#fcd34d}
+
+/* ---- Isolated node highlight ---- */
+.isolated-badge{
+  animation:pulse-red 2s infinite;
+}
+@keyframes pulse-red{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}
+  50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}
+}
+
+/* ---- Sort toggle ---- */
+.sort-toggle{cursor:pointer;user-select:none;transition:color 0.2s}
+.sort-toggle:hover{color:var(--primary)}
+.sort-toggle.active-sort{color:var(--primary);font-weight:700}
+
+@media(max-width:768px){.page-area{padding:12px!important}.stat-card .stat-value{font-size:20px}}
+</style>
+</head>
+<body>
+
+<!-- ============ NAVBAR ============ -->
+<nav class="navbar navbar-expand-lg topbar">
+<div class="container-fluid px-3 px-lg-4">
+<a class="navbar-brand" href="javascript:void(0)" onclick="navigate('dashboard')">
+  <i class="fa-solid fa-location-dot me-2"></i>CampusPath v2.0
+</a>
+<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+  <span class="navbar-toggler-icon"></span>
+</button>
+<div class="collapse navbar-collapse" id="mainNav">
+  <ul class="navbar-nav me-auto" id="nav_tabs"></ul>
+  <span class="small text-white-50" id="top_time"></span>
+</div>
+</div>
+</nav>
+
+<!-- ============ TOAST ============ -->
+<div class="toast-wrap" id="toast_area"></div>
+
+<!-- ============ ROOM DETAIL MODAL ============ -->
+<div class="modal fade modal-dark" id="roomDetailModal" tabindex="-1">
+<div class="modal-dialog modal-lg"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title"><i class="fa-solid fa-door-open me-2"></i><span id="rmd_title">房间详情</span></h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body" id="rmd_body"></div>
+<div class="modal-footer">
+  <button class="btn btn-primary btn-rounded btn-sm" onclick="jumpToNav($('#rmd_node_id').textContent,'')" data-bs-dismiss="modal"><i class="fa-solid fa-location-crosshairs me-1"></i>设为此处起点</button>
+  <button class="btn btn-outline-light btn-rounded btn-sm" data-bs-dismiss="modal">关闭</button>
+</div>
+</div></div></div>
+
+<!-- ============ PAGE AREA ============ -->
+<main class="page-area container-fluid px-3 px-lg-4 py-3" id="page_area"></main>
+
+<script>
+/* ============================================================
+   CampusPath v2.0 — SPA Core
+   ============================================================ */
+var currentPage='dashboard',API_BASE='',_charts={};
+var _currentAlgo='dijkstra',_currentHeuristic='euclidean';
+var _navStart=null,_navGoal=null;
+
+function $(id){return document.getElementById(id)}
+function $$(sel){return document.querySelector(sel)}
+function $$$(sel){return document.querySelectorAll(sel)}
+function esc(s){var d=document.createElement('div');d.textContent=(s===null||s===undefined)?'':String(s);return d.innerHTML}
+function fmtNum(v){return Number(v||0).toFixed(2)}
+function fmtDist(v){return Number(v||0).toFixed(1)+' m'}
+function fmtInt(v){return Math.round(Number(v||0))}
+
+function toast(msg,type){
+  type=type||'info';var area=$('toast_area');if(!area)return;
+  var d=document.createElement('div');d.className='toast-msg '+type;
+  var icons={success:'fa-circle-check',error:'fa-circle-exclamation',info:'fa-circle-info'};
+  d.innerHTML='<i class="fa-solid '+(icons[type]||icons.info)+'"></i> '+esc(msg);
+  area.appendChild(d);
+  setTimeout(function(){d.style.opacity='0';d.style.transition='opacity 0.3s';
+    setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},300);
+  },4000);
+}
+
+async function api(url,opts){
+  opts=opts||{};var headers={'Content-Type':'application/json'};
+  var fetchOpts={method:opts.method||'GET',headers:headers};
+  if(opts.body)fetchOpts.body=JSON.stringify(opts.body);
+  try{var r=await fetch(API_BASE+url,fetchOpts);return await r.json()}
+  catch(e){return{success:false,message:'网络错误: '+e.message}}
+}
+
+/* ---- SPA Navigation ---- */
+function navigate(pid){currentPage=pid;buildNavTabs();renderPage(pid);window.scrollTo({top:0,behavior:'smooth'})}
+
+function buildNavTabs(){
+  var tabs=[
+    {id:'dashboard',icon:'chart-pie',label:'导航仪表盘'},
+    {id:'navigate',icon:'map-location-dot',label:'路径导航'},
+    {id:'directory',icon:'magnifying-glass',label:'房间目录'},
+    {id:'benchmark',icon:'chart-bar',label:'算法基准'},
+    {id:'accessible',icon:'wheelchair-move',label:'无障碍通道'},
+    {id:'validate',icon:'shield-check',label:'系统诊断'},
+    {id:'smartnav',icon:'brain',label:'智慧导航'},
+    {id:'about',icon:'circle-info',label:'关于系统'},
+  ];
+  var html='';
+  tabs.forEach(function(t){
+    html+='<li class="nav-item"><a class="nav-link'+(currentPage===t.id?' active':'')+'" href="javascript:void(0)" onclick="navigate(\''+t.id+'\')"><i class="fa-solid fa-'+t.icon+'"></i> '+t.label+'</a></li>';
+  });
+  $('nav_tabs').innerHTML=html;
+}
+
+function renderPage(pid){
+  Object.keys(_charts).forEach(function(k){if(_charts[k]){_charts[k].destroy();_charts[k]=null}});
+  _charts={};
+  var h='';
+  switch(pid){
+    case 'dashboard':h=renderDashboard();break;
+    case 'navigate':h=renderNavigate();break;
+    case 'directory':h=renderDirectory();break;
+    case 'benchmark':h=renderBenchmark();break;
+    case 'accessible':h=renderAccessible();break;
+    case 'validate':h=renderValidate();break;
+    case 'smartnav':h=renderSmartNav();break;
+    case 'about':h=renderAbout();break;
+    default:h=renderDashboard();
+  }
+  $('page_area').innerHTML='<div class="page-section">'+h+'</div>';
+  if(pid==='dashboard')loadDashboard();
+  if(pid==='navigate')initNavigate();
+  if(pid==='directory')loadDirectory();
+  if(pid==='benchmark')loadBenchmark();
+  if(pid==='accessible')initAccessible();
+  if(pid==='validate')loadValidate();
+  if(pid==='smartnav')initSmartNav();
+}
+
+/* ============================================================
+   PAGE 1: DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-primary me-2"></i>导航仪表盘</h3>'+
+    '<p class="text-secondary small mb-3">建筑物状态总览 · 实时统计 · 快速导航</p>'+
+    '<div class="row g-3 mb-3" id="dash_stats"></div>'+
+    '<div class="row g-3">'+
+      '<div class="col-lg-7"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-clock-rotate-left me-2"></i>最近搜索</div>'+
+      '<div class="card-body" id="dash_recent"><p class="text-muted small mb-0">加载中...</p></div></div></div>'+
+      '<div class="col-lg-5"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-bolt me-2"></i>快速导航</div>'+
+      '<div class="card-body d-flex flex-column gap-2" id="dash_quick"></div></div></div>'+
+    '</div>';
+}
+
+async function loadDashboard(){
+  var results=await Promise.all([api('/api/building'),api('/api/building/stats'),api('/api/recent')]);
+  var bInfo=results[0],sInfo=results[1],recentR=results[2];
+  var stats=sInfo.success?sInfo.data:{};
+  var cards=[
+    {label:'总节点数',id:'s_nodes',val:bInfo.success?bInfo.data.total_vertices:'-',icon:'circle-nodes'},
+    {label:'总边数',id:'s_edges',val:bInfo.success?bInfo.data.total_edges:'-',icon:'share-nodes'},
+    {label:'楼层数',id:'s_floors',val:bInfo.success?bInfo.data.floors.join(','):'-',icon:'layer-group'},
+    {label:'房间数',id:'s_rooms',val:stats.node_types?stats.node_types.room||0:'-',icon:'door-open'},
+    {label:'连通性',id:'s_conn',val:stats.connectivity_score?Math.round(stats.connectivity_score*100)+'%':'-',icon:'link'},
+    {label:'算法数',id:'s_algos',val:7,icon:'microchip'},
+  ];
+  var statsDiv=$('dash_stats');if(!statsDiv)return;
+  statsDiv.innerHTML=cards.map(function(c){
+    return '<div class="col-6 col-md-4 col-lg-2"><div class="card stat-card"><div class="card-body p-3 text-center">'+
+      '<div class="stat-icon mx-auto mb-2"><i class="fa-solid fa-'+c.icon+'"></i></div>'+
+      '<div class="stat-label">'+c.label+'</div><div class="stat-value">'+c.val+'</div></div></div></div>';
+  }).join('');
+
+  var recent=recentR.success&&recentR.data.recent?recentR.data.recent:[];
+  var recentDiv=$('dash_recent');
+  if(recent.length===0){
+    recentDiv.innerHTML='<p class="text-muted small mb-0"><i class="fa-solid fa-inbox me-1"></i>暂无搜索记录</p>';
+  }else{
+    recentDiv.innerHTML=recent.map(function(r){
+      return '<div class="dash-card-mini d-flex justify-content-between align-items-center" style="cursor:pointer" onclick="jumpToNav(\''+esc(r.start)+'\',\''+esc(r.goal)+'\',\''+esc(r.algorithm||'dijkstra')+'\')">'+
+        '<div><span class="badge badge-accent me-2">'+esc(r.start)+'</span><i class="fa-solid fa-arrow-right text-muted mx-1"></i><span class="badge badge-primary">'+esc(r.goal)+'</span></div>'+
+        '<small class="text-muted">'+esc(r.algorithm||'dijkstra')+'</small></div>';
+    }).join('');
+  }
+
+  $('dash_quick').innerHTML=[
+    {label:'教室→食堂',icon:'utensils',start:'F1-R101',goal:'F1-CANTEEN'},
+    {label:'入口→4F会议室',icon:'users',start:'F1-ENTRANCE',goal:'F4-CONF1'},
+    {label:'1F→4F图书馆',icon:'book',start:'F1-LOBBY',goal:'F4-LIBRARY'},
+    {label:'实验室→休息室',icon:'mug-hot',start:'F3-RESEARCH1',goal:'F4-LOUNGE'},
+  ].map(function(a){
+    return '<a class="quick-action" href="javascript:void(0)" onclick="jumpToNav(\''+a.start+'\',\''+a.goal+'\')">'+
+      '<i class="fa-solid fa-'+a.icon+'"></i><span>'+a.label+'</span>'+
+      '<small class="text-muted ms-auto">'+a.start+' → '+a.goal+'</small></a>';
+  }).join('');
+}
+
+function jumpToNav(start,goal,algo){_navStart=start;_navGoal=goal;if(algo)_currentAlgo=algo;navigate('navigate')}
+
+/* ============================================================
+   PAGE 2: NAVIGATE (ENHANCED: search box, animation, multi-floor)
+   ============================================================ */
+function renderNavigate(){
+  return '<div class="row g-3">'+
+    '<div class="col-lg-3">'+
+      '<div class="card card-custom"><div class="card-header"><i class="fa-solid fa-sliders me-2"></i>路径设置</div>'+
+      '<div class="card-body">'+
+        '<label class="form-label">起点 <small class="text-muted">(输入搜索或点击地图)</small></label>'+
+        '<div class="search-wrap mb-2"><input class="form-control" id="nav_start_input" placeholder="搜索房间名或编号..." autocomplete="off" oninput="onSearchInput(\'start\')" onfocus="onSearchInput(\'start\')" onkeydown="onSearchKey(event,\'start\')">'+
+        '<div class="search-dropdown hidden" id="nav_start_dd"></div></div>'+
+        '<label class="form-label">终点</label>'+
+        '<div class="search-wrap mb-3"><input class="form-control" id="nav_goal_input" placeholder="搜索房间名或编号..." autocomplete="off" oninput="onSearchInput(\'goal\')" onfocus="onSearchInput(\'goal\')" onkeydown="onSearchKey(event,\'goal\')">'+
+        '<div class="search-dropdown hidden" id="nav_goal_dd"></div></div>'+
+        '<label class="form-label">算法</label><select class="form-select mb-2" id="nav_algo" onchange="onAlgoChange()">'+
+          '<option value="dijkstra">Dijkstra 最短路径</option>'+
+          '<option value="a_star">A* 启发式搜索</option>'+
+          '<option value="bfs">BFS 广度优先</option>'+
+          '<option value="bidirectional_bfs">双向 BFS</option>'+
+          '<option value="bidirectional_dijkstra">双向 Dijkstra</option>'+
+        '</select>'+
+        '<div class="mb-3" id="nav_heur_wrap">'+
+          '<label class="form-label">启发函数</label>'+
+          '<select class="form-select" id="nav_heuristic">'+
+            '<option value="euclidean">欧几里得距离</option>'+
+            '<option value="manhattan">曼哈顿距离</option>'+
+            '<option value="floor_aware">楼层感知 (推荐)</option>'+
+          '</select>'+
+        '</div>'+
+        '<button class="btn btn-primary btn-rounded w-100 mb-2" onclick="findPath()"><i class="fa-solid fa-magnifying-glass me-1"></i>查找路径</button>'+
+        '<button class="btn btn-accent btn-rounded w-100 mb-2" onclick="compareAlgos()"><i class="fa-solid fa-code-compare me-1"></i>对比全部算法</button>'+
+        '<button class="btn btn-outline-light btn-rounded w-100" onclick="saveToRecent()"><i class="fa-solid fa-bookmark me-1"></i>保存到历史</button>'+
+      '</div></div>'+
+      '<div class="card card-custom"><div class="card-header"><i class="fa-solid fa-building me-2"></i>楼层切换</div>'+
+      '<div class="card-body text-center" id="floor_tabs"></div>'+
+      '<div class="card-body pt-0 text-center"><label class="form-label">显示模式</label>'+
+        '<select class="form-select form-select-sm" id="view_mode" onchange="onViewModeChange()">'+
+          '<option value="single">单楼层视图</option>'+
+          '<option value="multi">多楼层同时显示</option>'+
+        '</select></div></div>'+
+    '</div>'+
+    '<div class="col-lg-9">'+
+      '<div class="canvas-wrap mb-2" id="nav_canvas_wrap"><canvas id="nav_canvas" style="width:100%;height:520px"></canvas></div>'+
+      '<div class="multi-floor-wrap hidden mb-2" id="multi_floor_wrap"></div>'+
+      '<div class="anim-ctrl mb-2 hidden" id="anim_ctrl">'+
+        '<button onclick="animStepBack()" title="后退一步"><i class="fa-solid fa-backward-step"></i></button>'+
+        '<button onclick="animPlay()" id="anim_play_btn" title="播放"><i class="fa-solid fa-play"></i></button>'+
+        '<button onclick="animPause()" title="暂停"><i class="fa-solid fa-pause"></i></button>'+
+        '<button onclick="animStop()" title="停止"><i class="fa-solid fa-stop"></i></button>'+
+        '<button onclick="animStepFwd()" title="前进一步"><i class="fa-solid fa-forward-step"></i></button>'+
+        '<span class="speed-label">速度:</span>'+
+        '<input type="range" min="50" max="1000" value="200" oninput="animSetSpeed(this.value)" class="form-range">'+
+        '<span class="speed-label" id="anim_speed_label">200ms</span>'+
+        '<span class="speed-label ms-2">步: <b id="anim_step_info">-/-</b></span>'+
+      '</div>'+
+      '<div class="info-bar mb-3">'+
+        '<span><i class="fa-solid fa-route"></i>距离: <b class="val" id="ni_dist">-</b></span>'+
+        '<span><i class="fa-solid fa-eye"></i>访问节点: <b class="val" id="ni_visited">-</b></span>'+
+        '<span><i class="fa-solid fa-clock"></i>耗时: <b class="val" id="ni_time">-</b></span>'+
+        '<span><i class="fa-solid fa-arrow-right-arrow-left"></i>路径节点: <b class="val" id="ni_len">-</b></span>'+
+      '</div>'+
+      '<div class="card card-custom" id="dir_panel" style="display:none"><div class="card-header"><i class="fa-solid fa-person-walking me-2"></i>文本转向指引</div>'+
+      '<div class="card-body" id="dir_steps" style="max-height:300px;overflow-y:auto"></div></div>'+
+    '</div></div>';
+}
+
+var _mapRenderer=null,_animator=null,_currentFloor=1,_floorData=null,_allNodes=[];
+var _viewMode='single',_multiRenderers=[],_savedSearchState=null;
+
+function onAlgoChange(){
+  var wrap=$('nav_heur_wrap');if(!wrap)return;
+  wrap.style.display=$('nav_algo').value==='a_star'?'block':'none';
+}
+
+function onViewModeChange(){
+  _viewMode=$('view_mode').value;
+  if(_viewMode==='multi'){
+    $('nav_canvas_wrap').classList.add('hidden');
+    $('multi_floor_wrap').classList.remove('hidden');
+    renderMultiFloor();
+  }else{
+    $('nav_canvas_wrap').classList.remove('hidden');
+    $('multi_floor_wrap').classList.add('hidden');
+  }
+}
+
+/* ---- Search Autocomplete ---- */
+var _searchIdx=0;
+function onSearchInput(which){
+  var input=$('nav_'+which+'_input'),dd=$('nav_'+which+'_dd');
+  var q=(input.value||'').toLowerCase().trim();
+  if(!q){dd.classList.add('hidden');return}
+  var matches=_allNodes.filter(function(n){
+    return n.name.toLowerCase().indexOf(q)>=0 || n.node_id.toLowerCase().indexOf(q)>=0;
+  }).slice(0,15);
+  if(matches.length===0){dd.classList.add('hidden');return}
+  _searchIdx=0;
+  dd.innerHTML=matches.map(function(m,i){
+    return'<div class="search-item'+(i===0?' active':'')+'" data-idx="'+i+'" data-nid="'+esc(m.node_id)+'" onmousedown="selectSearchItem(\''+which+'\',\''+esc(m.node_id)+'\')">'+
+      '<span class="si-name">'+esc(m.name)+'</span><span class="si-id">'+esc(m.node_id)+'</span><span class="badge badge-accent si-floor">'+m.floor+'F</span></div>';
+  }).join('');
+  dd.classList.remove('hidden');
+}
+
+function onSearchKey(e,which){
+  var dd=$('nav_'+which+'_dd');if(dd.classList.contains('hidden'))return;
+  var items=dd.querySelectorAll('.search-item');
+  if(e.key==='ArrowDown'){e.preventDefault();_searchIdx=Math.min(_searchIdx+1,items.length-1);updateSearchActive(items)}
+  else if(e.key==='ArrowUp'){e.preventDefault();_searchIdx=Math.max(_searchIdx-1,0);updateSearchActive(items)}
+  else if(e.key==='Enter'){e.preventDefault();if(items[_searchIdx])selectSearchItem(which,items[_searchIdx].dataset.nid)}
+  else if(e.key==='Escape'){dd.classList.add('hidden')}
+}
+
+function updateSearchActive(items){
+  items.forEach(function(it,i){it.classList.toggle('active',i===_searchIdx)});
+}
+
+function selectSearchItem(which,nid){
+  $('nav_'+which+'_input').value=nid;
+  $('nav_'+which+'_dd').classList.add('hidden');
+  if(which==='start')_navStart=nid;else _navGoal=nid;
+}
+
+async function initNavigate(){
+  var r=await api('/api/building/all-nodes');
+  if(!r.success){toast('加载节点失败: '+r.message,'error');return}
+  _allNodes=(r.data.nodes||[]).sort(function(a,b){return a.floor!==b.floor?a.floor-b.floor:a.node_id.localeCompare(b.node_id)});
+  if($('nav_start_input')){$('nav_start_input').value=_navStart||''}
+  if($('nav_goal_input')){$('nav_goal_input').value=_navGoal||''}
+  var aEl=$('nav_algo');if(aEl)aEl.value=_currentAlgo;
+  var hEl=$('nav_heuristic');if(hEl)hEl.value=_currentHeuristic;
+  onAlgoChange();
+  var bR=await api('/api/building');
+  var floorsList=bR.success?bR.data.floors:[1,2,3,4];
+  $('floor_tabs').innerHTML=floorsList.map(function(f){return '<span class="floor-tab'+(f===_currentFloor?' active':'')+'" onclick="switchFloor('+f+')">'+f+'F</span>'}).join('');
+  initMap();await switchFloor(_currentFloor);
+  if(_navStart&&_navGoal){await findPath();_navStart=null;_navGoal=null}
+}
+
+function initMap(){
+  var canvas=$('nav_canvas');if(!canvas)return;
+  _mapRenderer=new MapRenderer(canvas);_animator=new AlgorithmAnimator(_mapRenderer);
+  canvas.addEventListener('click',function(e){
+    var nid=_mapRenderer.hitTest(e.clientX,e.clientY);if(!nid)return;
+    if(!_navStart||(_navStart&&_navGoal)){_navStart=nid;_navGoal=null;if($('nav_start_input'))$('nav_start_input').value=nid;if($('nav_goal_input'))$('nav_goal_input').value='';toast('已设置起点: '+nid,'info')}
+    else{_navGoal=nid;if($('nav_goal_input'))$('nav_goal_input').value=nid;toast('已设置终点: '+nid,'info');findPath()}
+  });
+}
+
+async function switchFloor(floor){
+  _currentFloor=floor;
+  document.querySelectorAll('#floor_tabs .floor-tab').forEach(function(t){t.classList.toggle('active',t.textContent===floor+'F')});
+  if(_viewMode==='multi'){renderMultiFloor();return}
+  var r=await api('/api/building/floor/'+floor);
+  if(!r.success){toast('加载楼层失败','error');return}
+  _floorData=r.data;if(_mapRenderer)_mapRenderer.loadFloor(_floorData);
+  if(_savedSearchState){_mapRenderer.setState(_savedSearchState.state,_savedSearchState.path);_savedSearchState=null}
+}
+
+async function renderMultiFloor(){
+  var bR=await api('/api/building');if(!bR.success)return;
+  var floors=bR.data.floors;
+  _multiRenderers=[];
+  var html='';
+  floors.forEach(function(f){
+    html+='<div class="floor-label-strip"><span><i class="fa-solid fa-layer-group me-1"></i>'+f+'F</span><span class="text-muted small">点击节点设置起/终点</span></div>'+
+      '<div class="canvas-wrap mb-1"><canvas id="mf_canvas_'+f+'" style="width:100%;height:260px"></canvas></div>';
+  });
+  $('multi_floor_wrap').innerHTML=html;
+  // Load each floor
+  for(var i=0;i<floors.length;i++){
+    var f=floors[i];
+    var r=await api('/api/building/floor/'+f);
+    if(!r.success)continue;
+    var canvas=$('mf_canvas_'+f);if(!canvas)continue;
+    var renderer=new MapRenderer(canvas);renderer.loadFloor(r.data);
+    _multiRenderers.push({floor:f,renderer:renderer});
+    // Click handler
+    (function(renderer,floor){
+      canvas.addEventListener('click',function(e){
+        var nid=renderer.hitTest(e.clientX,e.clientY);if(!nid)return;
+        if(!_navStart||(_navStart&&_navGoal)){_navStart=nid;_navGoal=null;if($('nav_start_input'))$('nav_start_input').value=nid;if($('nav_goal_input'))$('nav_goal_input').value='';}
+        else{_navGoal=nid;if($('nav_goal_input'))$('nav_goal_input').value=nid;}
+        toast('已设置: '+nid+' ('+floor+'F)','info');
+        // Highlight on all floors
+        var st={};st[nid]=_navGoal?'goal':'start';if(_navStart)st[_navStart]='start';if(_navGoal)st[_navGoal]='goal';
+        _multiRenderers.forEach(function(mr){mr.renderer.setState(st,[])});
+        if(_navStart&&_navGoal)findPath();
+      });
+    })(renderer,f);
+  }
+  // If we have a saved search state, apply it
+  if(_savedSearchState){
+    _multiRenderers.forEach(function(mr){mr.renderer.setState(_savedSearchState.state,_savedSearchState.path)});
+    _savedSearchState=null;
+  }
+}
+
+/* ---- Animation Controls ---- */
+function animPlay(){
+  if(!_animator)return;
+  if(_animator.currentStep<0){_animator.loadSteps(_animator.steps,_animator.finalPath)}
+  if(_animator.play()){$('anim_ctrl').classList.remove('hidden');updateAnimUI()}
+}
+
+function animPause(){if(_animator)_animator.pause();updateAnimUI()}
+function animStop(){
+  if(_animator){_animator.stop();
+    if(_mapRenderer&&_savedSearchState)_mapRenderer.setState(_savedSearchState.state,_savedSearchState.path)}
+  updateAnimUI();$('anim_step_info').textContent='-/-';
+}
+function animStepFwd(){if(_animator){_animator.stepForward();updateAnimUI()}}
+function animStepBack(){if(_animator){_animator.stepBackward();updateAnimUI()}}
+function animSetSpeed(v){
+  if(_animator)_animator.setSpeed(parseInt(v));
+  var el=$('anim_speed_label');if(el)el.textContent=v+'ms';
+}
+
+function updateAnimUI(){
+  if(!_animator)return;
+  var el=$('anim_step_info');if(el)el.textContent=(_animator.currentStep+1)+'/'+_animator.steps.length;
+}
+
+async function findPath(){
+  var start=$('nav_start_input').value.trim(),goal=$('nav_goal_input').value.trim();
+  var algo=$('nav_algo').value,heur=$('nav_heuristic').value;
+  if(!start||!goal){toast('请搜索并选择起点和终点','error');return}
+  _navStart=start;_navGoal=goal;_currentAlgo=algo;_currentHeuristic=heur;
+  api('/api/recent',{method:'POST',body:{start:start,goal:goal,algorithm:algo}});
+  var r=await api('/api/path',{method:'POST',body:{start:start,goal:goal,algorithm:algo,heuristic:heur,record_steps:true}});
+  if(!r.success){toast(r.message,'error');return}
+  var d=r.data;
+  $('ni_dist').textContent=fmtDist(d.total_distance);
+  $('ni_visited').textContent=d.nodes_visited;
+  $('ni_time').textContent=fmtNum(d.execution_time_ms)+' ms';
+  $('ni_len').textContent=d.path?d.path.length:0;
+  var state={};d.path.forEach(function(nid){state[nid]='path'});
+  state[start]='start';state[goal]='goal';
+  _savedSearchState={state:state,path:d.path};
+  if(_viewMode==='multi'){
+    _multiRenderers.forEach(function(mr){mr.renderer.setState(state,d.path)});
+    var startNode=_allNodes.find(function(n){return n.node_id===start});
+    if(startNode){var mf=$('multi_floor_wrap');if(mf){var strips=mf.querySelectorAll('.floor-label-strip');for(var i=0;i<strips.length;i++){if(strips[i].textContent.indexOf(startNode.floor+'F')===0){strips[i].scrollIntoView({behavior:'smooth'});break}}}}
+  }else{
+    if(_mapRenderer&&d.path){_mapRenderer.setState(state,d.path);
+      var startNode2=_allNodes.find(function(n){return n.node_id===start});
+      if(startNode2&&startNode2.floor!==_currentFloor){await switchFloor(startNode2.floor);_savedSearchState={state:state,path:d.path};_mapRenderer.setState(state,d.path)}
+    }
+    if(_animator&&d.steps&&d.steps.length>0){_animator.loadSteps(d.steps,d.path);$('anim_ctrl').classList.remove('hidden');updateAnimUI()}
+    else{$('anim_ctrl').classList.add('hidden')}
+  }
+  var dirR=await api('/api/directions',{method:'POST',body:{path:d.path}});
+  var dirPanel=$('dir_panel'),dirSteps=$('dir_steps');
+  if(dirR.success&&dirPanel&&dirSteps){
+    dirPanel.style.display='block';
+    dirSteps.innerHTML=(dirR.data.directions||[]).map(function(dd){
+      var cls=dd.action==='arrive'?'arrive':(dd.action==='take_elevator'?'elevator':(dd.action==='take_stairs'?'stairs':''));
+      return '<div class="dir-step"><div class="dir-step-num '+cls+'">'+(dd.action==='arrive'?'<i class="fa-solid fa-flag-checkered"></i>':dd.step)+'</div>'+
+        '<div><div class="dir-instruction">'+esc(dd.instruction)+'</div><div class="dir-meta">'+esc(dd.from_node.name)+' → '+esc(dd.to_node.name)+(dd.distance_m>0?' · '+dd.distance_m.toFixed(1)+'m':'')+'</div></div></div>';
+    }).join('');
+  }
+  toast('路径规划完成: '+fmtDist(d.total_distance),'success');
+}
+
+async function compareAlgos(){
+  var start=$('nav_start_input').value.trim(),goal=$('nav_goal_input').value.trim();
+  if(!start||!goal){toast('请选择起点和终点','error');return}
+  var r=await api('/api/compare',{method:'POST',body:{start:start,goal:goal}});
+  if(!r.success){toast(r.message,'error');return}
+  var results=r.data.results||{};
+  var rows=Object.keys(results).map(function(k){
+    var v=results[k];if(v.error)return'<tr><td>'+esc(k)+'</td><td colspan="4" class="text-danger">'+esc(v.error)+'</td></tr>';
+    return'<tr><td><code>'+esc(k)+'</code></td><td>'+fmtDist(v.total_distance)+'</td><td>'+v.nodes_visited+'</td><td>'+fmtNum(v.execution_time_ms)+' ms</td><td>'+(v.path?v.path.length:0)+' 节点</td></tr>';
+  }).join('');
+  $('dir_panel').style.display='block';
+  $('dir_steps').innerHTML='<table class="table table-custom table-sm mb-0"><thead><tr><th>算法</th><th>距离</th><th>访问节点</th><th>耗时</th><th>路径长度</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  toast('算法对比完成','success');
+}
+
+function saveToRecent(){
+  var start=$('nav_start_input').value.trim(),goal=$('nav_goal_input').value.trim();
+  if(!start||!goal){toast('请先选择起点和终点','error');return}
+  api('/api/recent',{method:'POST',body:{start:start,goal:goal,algorithm:_currentAlgo}});
+  toast('已保存到搜索历史','success');
+}
+
+/* ============================================================
+   PAGE 3: DIRECTORY (ENHANCED: detail card modal, pinyin sort)
+   ============================================================ */
+var _dirSortPinyin=false;
+var _pinyinMap={
+  '大':'da','阶':'jie','教':'jiao','室':'shi','普':'pu','通':'tong','食':'shi','堂':'tang','西':'xi','东':'dong','卫':'wei',
+  '生':'sheng','间':'jian','安':'an','保':'bao','办':'ban','公':'gong','多':'duo','媒':'mei','体':'ti','自':'zi','习':'xi',
+  '教':'jiao','师':'shi','休':'xiu','息':'xi','区':'qu','计':'ji','算':'suan','机':'ji','实':'shi','验':'yan','综':'zong',
+  '合':'he','研':'yan','讨':'tao','学':'shu','术':'shu','网':'wang','络':'luo','报':'bao','告':'gao','厅':'ting','会':'hui',
+  '议':'yi','图':'tu','书':'shu','资':'zi','料':'liao','天':'tian','台':'tai','入':'ru','主':'zhu','大':'da','厅':'ting',
+  '楼':'lou','梯':'ti','电':'di','中':'zhong','央':'yang','A':'a','B':'b','I':'i','1':'1','2':'2','3':'3','4':'4',
+};
+
+function _getPinyinKey(name){
+  var key='';
+  for(var i=0;i<name.length;i++){var ch=name[i];key+=_pinyinMap[ch]||ch.toLowerCase()}
+  return key;
+}
+
+function renderDirectory(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>房间目录</h3>'+
+    '<p class="text-secondary small mb-3">搜索与筛选建筑物内所有房间 · 点击查看详情卡片</p>'+
+    '<div class="card card-custom"><div class="card-body">'+
+      '<div class="row g-2 mb-3">'+
+        '<div class="col-md-4"><input class="form-control" id="dir_search" placeholder="搜索房间名或编号..." oninput="loadDirectory()"></div>'+
+        '<div class="col-md-2"><select class="form-select" id="dir_floor" onchange="loadDirectory()"><option value="">全部楼层</option><option value="1">1F</option><option value="2">2F</option><option value="3">3F</option><option value="4">4F</option></select></div>'+
+        '<div class="col-md-2"><select class="form-select" id="dir_type" onchange="loadDirectory()"><option value="">全部类型</option><option value="room">教室/房间</option><option value="corridor">走廊</option><option value="stair">楼梯</option><option value="elevator">电梯</option><option value="entrance">入口</option><option value="poi">POI设施</option></select></div>'+
+        '<div class="col-md-2"><button class="btn btn-outline-light btn-rounded btn-sm w-100 sort-toggle" id="dir_sort_btn" onclick="toggleDirSort()"><i class="fa-solid fa-sort-alpha-down me-1"></i>按名称排序 <span id="dir_sort_mode">(默认)</span></button></div>'+
+        '<div class="col-md-2"><span class="text-muted small" id="dir_count">-</span></div>'+
+      '</div>'+
+      '<div class="table-responsive"><table class="table table-custom table-hover mb-0"><thead><tr><th>编号</th><th>名称</th><th>楼层</th><th>类型</th><th>坐标</th><th>操作</th></tr></thead><tbody id="dir_tbody"></tbody></table></div>'+
+    '</div></div>';
+}
+
+function toggleDirSort(){
+  _dirSortPinyin=!_dirSortPinyin;
+  var btn=$('dir_sort_btn'),mode=$('dir_sort_mode');
+  if(btn)btn.innerHTML='<i class="fa-solid '+( _dirSortPinyin?'fa-sort-alpha-down':'fa-font')+' me-1"></i>'+(_dirSortPinyin?'拼音排序':'按编号排序')+' <span id="dir_sort_mode">('+(_dirSortPinyin?'拼音':'默认')+')</span>';
+  loadDirectory();
+}
+
+async function loadDirectory(){
+  var q=$('dir_search').value||'',f=$('dir_floor').value||'',t=$('dir_type').value||'';
+  var params=new URLSearchParams();if(q)params.set('q',q);if(f)params.set('floor',f);if(t)params.set('type',t);
+  var r=await api('/api/rooms/search?'+params.toString());
+  var tbody=$('dir_tbody'),countEl=$('dir_count');
+  if(!r.success){if(tbody)tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger">加载失败</td></tr>';return}
+  var rooms=r.data.rooms||[];
+  // Sort
+  if(_dirSortPinyin){
+    rooms.sort(function(a,b){return _getPinyinKey(a.name).localeCompare(_getPinyinKey(b.name))});
+  }else{
+    rooms.sort(function(a,b){return a.node_id.localeCompare(b.node_id)});
+  }
+  if(countEl)countEl.textContent='共 '+rooms.length+' 条';
+  var typeIcons={room:'fa-door-open',corridor:'fa-arrows-left-right',stair:'fa-stairs',elevator:'fa-elevator',entrance:'fa-door-closed',poi:'fa-location-dot'};
+  var typeLabels={room:'教室',corridor:'走廊',stair:'楼梯',elevator:'电梯',entrance:'入口',poi:'POI'};
+  tbody.innerHTML=rooms.map(function(rm){
+    return'<tr style="cursor:pointer" onclick="showRoomDetail(\''+esc(rm.node_id)+'\')"><td><code class="text-primary">'+esc(rm.node_id)+'</code></td>'+
+      '<td>'+esc(rm.name)+'</td><td><span class="badge badge-accent">'+rm.floor+'F</span></td>'+
+      '<td><i class="fa-solid '+(typeIcons[rm.type]||'fa-circle')+' me-1 text-muted"></i>'+(typeLabels[rm.type]||rm.type)+'</td>'+
+      '<td class="text-muted small">('+fmtNum(rm.x||0)+', '+fmtNum(rm.y||0)+')</td>'+
+      '<td><button class="btn btn-sm btn-primary btn-rounded me-1" onclick="event.stopPropagation();showRoomDetail(\''+esc(rm.node_id)+'\')"><i class="fa-solid fa-circle-info"></i></button>'+
+      '<button class="btn btn-sm btn-accent btn-rounded" onclick="event.stopPropagation();jumpToNav(\''+esc(rm.node_id)+'\',\'\')"><i class="fa-solid fa-location-crosshairs"></i></button></td></tr>';
+  }).join('');
+}
+
+async function showRoomDetail(roomId){
+  var r=await api('/api/room/'+roomId);
+  if(!r.success){toast(r.message,'error');return}
+  var d=r.data;
+  var typeIcons={room:'fa-door-open',corridor:'fa-arrows-left-right',stair:'fa-stairs',elevator:'fa-elevator',entrance:'fa-door-closed',poi:'fa-location-dot'};
+  var typeLabels={room:'教室',corridor:'走廊',stair:'楼梯',elevator:'电梯',entrance:'入口',poi:'POI'};
+  var capLabel=d.capacity>0?d.capacity+' 人':'结构通道';
+  var capBadge=d.capacity>=100?'badge-primary':(d.capacity>=30?'badge-accent':(d.capacity>0?'badge-success':'badge-warning'));
+  var featuresHtml=d.features&&d.features.length>0?d.features.map(function(f){return'<span class="room-feature-tag"><i class="fa-solid fa-check-circle me-1"></i>'+esc(f)+'</span>'}).join(''):'<span class="text-muted small">无特殊设施</span>';
+  var adjHtml=d.adjacent_rooms&&d.adjacent_rooms.length>0?d.adjacent_rooms.slice(0,8).map(function(a){
+    return'<span class="badge badge-accent me-1 mb-1" style="cursor:pointer" onclick="showRoomDetail(\''+esc(a.node_id)+'\')" title="'+esc(a.name)+' · '+a.distance_m+'m">'+esc(a.node_id)+' <small>('+a.distance_m+'m)</small></span>';
+  }).join(''):'<span class="text-muted small">无相邻房间</span>';
+  $('rmd_title').textContent=d.name+' ('+d.node_id+')';
+  $('rmd_body').innerHTML=
+    '<div class="row g-3">'+
+      '<div class="col-md-6">'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">编号</span><code class="text-primary">'+esc(d.node_id)+'</code></div>'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">类型</span><span><i class="fa-solid '+(typeIcons[d.type]||'fa-circle')+' me-1"></i>'+(typeLabels[d.type]||d.type)+'</span></div>'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">楼层</span><span class="badge badge-accent">'+d.floor+'F</span></div>'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">容量</span><span class="badge '+capBadge+'">'+capLabel+'</span></div>'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">连接度</span><span class="fw-bold">'+d.degree+' 条边</span></div>'+
+        '<div class="d-flex justify-content-between mb-2"><span class="text-muted small">坐标</span><span class="text-muted small">('+fmtNum(d.x)+', '+fmtNum(d.y)+')</span></div>'+
+      '</div>'+
+      '<div class="col-md-6">'+
+        '<label class="form-label"><i class="fa-solid fa-bullseye me-1"></i>用途</label><p class="small text-secondary">'+esc(d.purpose)+'</p>'+
+        '<label class="form-label"><i class="fa-solid fa-star me-1"></i>设施</label><div>'+featuresHtml+'</div>'+
+      '</div>'+
+      '<div class="col-12">'+
+        '<label class="form-label"><i class="fa-solid fa-link me-1"></i>相邻房间 ('+d.adjacent_rooms.length+'间)</label><div>'+adjHtml+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:none" id="rmd_node_id">'+esc(d.node_id)+'</div>';
+  var modal=new bootstrap.Modal($('roomDetailModal'));modal.show();
+}
+
+/* ============================================================
+   PAGE 4: BENCHMARK (ENHANCED: batch 10 scenarios + summary)
+   ============================================================ */
+function renderBenchmark(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-chart-bar text-primary me-2"></i>算法基准测试</h3>'+
+    '<p class="text-secondary small mb-3">7种算法变体性能对比 · Chart.js可视化 · 批量场景汇总</p>'+
+    '<div class="row g-2 mb-3">'+
+      '<div class="col-md-2"><select class="form-select" id="bm_start"><option value="">选择起点...</option></select></div>'+
+      '<div class="col-md-2"><select class="form-select" id="bm_goal"><option value="">选择终点...</option></select></div>'+
+      '<div class="col-md-2"><select class="form-select" id="bm_scenario" onchange="onBenchScenarioChange()"><option value="">或选择预设场景...</option></select></div>'+
+      '<div class="col-md-2"><button class="btn btn-primary btn-rounded w-100" onclick="runBenchmark()"><i class="fa-solid fa-play me-1"></i>运行对比</button></div>'+
+      '<div class="col-md-2"><button class="btn btn-accent btn-rounded w-100" onclick="runBatchBenchmark()"><i class="fa-solid fa-layer-group me-1"></i>批量10场景</button></div>'+
+      '<div class="col-md-2"><button class="btn btn-outline-light btn-rounded w-100 btn-sm" onclick="runBatchBenchmark()"><i class="fa-solid fa-chart-pie me-1"></i>汇总报告</button></div>'+
+    '</div>'+
+    '<div id="bm_single_charts">'+
+    '<div class="row g-3">'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header">距离对比 (m)</div><div class="card-body"><canvas id="bm_dist" height="240"></canvas></div></div></div>'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header">访问节点数</div><div class="card-body"><canvas id="bm_nodes" height="240"></canvas></div></div></div>'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header">执行时间 (ms)</div><div class="card-body"><canvas id="bm_time" height="240"></canvas></div></div></div>'+
+    '</div>'+
+    '</div>'+
+    '<div id="bm_batch_charts" class="hidden">'+
+    '<div class="row g-3">'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-chart-bar me-1"></i>各算法平均距离 (m)</div><div class="card-body"><canvas id="bm_batch_dist" height="240"></canvas></div></div></div>'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-eye me-1"></i>各算法平均访问节点</div><div class="card-body"><canvas id="bm_batch_nodes" height="240"></canvas></div></div></div>'+
+      '<div class="col-lg-4"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-clock me-1"></i>各算法平均耗时 (ms)</div><div class="card-body"><canvas id="bm_batch_time" height="240"></canvas></div></div></div>'+
+    '</div>'+
+    '<div class="row g-3 mt-1">'+
+      '<div class="col-lg-6"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-trophy me-1"></i>最优性 vs Dijkstra (10场景)</div><div class="card-body"><canvas id="bm_optimality" height="220"></canvas></div></div></div>'+
+      '<div class="col-lg-6"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-table me-1"></i>场景汇总表</div><div class="card-body" style="max-height:300px;overflow-y:auto"><div class="table-responsive"><table class="table table-custom table-sm mb-0" id="bm_batch_table"></table></div></div></div>'+
+    '</div>'+
+    '</div>'+
+    '<div class="card card-custom mt-3"><div class="card-header">对比结果表</div><div class="card-body"><div class="table-responsive"><table class="table table-custom table-sm mb-0" id="bm_table"></table></div></div></div>';
+}
+
+async function loadBenchmark(){
+  var r=await api('/api/building/all-nodes');if(!r.success)return;
+  var nodes=(r.data.nodes||[]).sort(function(a,b){return a.node_id.localeCompare(b.node_id)});
+  var opt='<option value="">-- 选择 --</option>';
+  nodes.forEach(function(n){opt+='<option value="'+esc(n.node_id)+'">'+esc(n.name)+' ('+esc(n.node_id)+')</option>'});
+  if($('bm_start'))$('bm_start').innerHTML=opt;if($('bm_goal'))$('bm_goal').innerHTML=opt;
+  var scR=await api('/api/batch-compare',{method:'POST',body:{}});
+  if(scR.success){
+    var scs=scR.data.scenarios||[],scOpt='<option value="">-- 预设场景 --</option>';
+    scs.forEach(function(sc,i){scOpt+='<option value="'+i+'">S'+(i+1)+': '+esc(sc.label)+'</option>'});
+    if($('bm_scenario'))$('bm_scenario').innerHTML=scOpt;
+  }
+}
+
+function onBenchScenarioChange(){
+  var idx=$('bm_scenario').value;if(idx==='')return;
+  api('/api/batch-compare',{method:'POST',body:{}}).then(function(r){
+    if(!r.success)return;var sc=r.data.scenarios[parseInt(idx)];
+    if(!sc)return;if($('bm_start'))$('bm_start').value=sc.start;if($('bm_goal'))$('bm_goal').value=sc.goal;
+  });
+}
+
+async function runBenchmark(){
+  var start=$('bm_start').value,goal=$('bm_goal').value;
+  if(!start||!goal){toast('请选择起点和终点','error');return}
+  var r=await api('/api/compare',{method:'POST',body:{start:start,goal:goal}});
+  if(!r.success){toast(r.message,'error');return}
+  var results=r.data.results||{},algos=Object.keys(results).filter(function(k){return!results[k].error});
+  var labels=algos.map(function(k){return k.replace(/_/g,' ')});
+  var distances=algos.map(function(k){return results[k].total_distance});
+  var visited=algos.map(function(k){return results[k].nodes_visited});
+  var times=algos.map(function(k){return results[k].execution_time_ms});
+  ['bmDist','bmNodes','bmTime'].forEach(function(k){if(_charts[k]){_charts[k].destroy();_charts[k]=null}});
+  var colors=['#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+  var chOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+            y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}};
+  _charts.bmDist=new Chart($('bm_dist'),{type:'bar',data:{labels:labels,datasets:[{data:distances,backgroundColor:colors,borderRadius:6}]},options:chOpts});
+  _charts.bmNodes=new Chart($('bm_nodes'),{type:'bar',data:{labels:labels,datasets:[{data:visited,backgroundColor:colors,borderRadius:6}]},options:chOpts});
+  _charts.bmTime=new Chart($('bm_time'),{type:'bar',data:{labels:labels,datasets:[{data:times,backgroundColor:colors,borderRadius:6}]},options:chOpts});
+  var bestDist=Math.min.apply(null,distances),bestNode=Math.min.apply(null,visited),bestTime=Math.min.apply(null,times);
+  $('bm_table').innerHTML='<thead><tr><th>算法</th><th>距离 (m)</th><th>访问节点</th><th>耗时 (ms)</th><th>路径长度</th></tr></thead><tbody>'+
+    algos.map(function(k,i){var v=results[k];
+      return'<tr><td><code>'+esc(k)+'</code></td>'+
+        '<td class="'+(v.total_distance===bestDist?'best-val':'')+'">'+fmtDist(v.total_distance)+'</td>'+
+        '<td class="'+(v.nodes_visited===bestNode?'best-val':'')+'">'+v.nodes_visited+'</td>'+
+        '<td class="'+(v.execution_time_ms===bestTime?'best-val':'')+'">'+fmtNum(v.execution_time_ms)+' ms</td>'+
+        '<td>'+(v.path?v.path.length:0)+' 节点</td></tr>';
+    }).join('')+'</tbody>';
+  toast('基准测试完成','success');
+}
+
+async function runBatchBenchmark(){
+  toast('正在运行全部10个场景...','info');
+  var r=await api('/api/batch-benchmark',{method:'POST',body:{}});
+  if(!r.success){toast(r.message,'error');return}
+  $('bm_single_charts').classList.add('hidden');
+  $('bm_batch_charts').classList.remove('hidden');
+  var cd=r.data.chart_data;
+  var colors=['#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+  var chOpts2={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'}},
+            y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}};
+  ['bmBatchDist','bmBatchNodes','bmBatchTime'].forEach(function(k){if(_charts[k]){_charts[k].destroy();_charts[k]=null}});
+  _charts.bmBatchDist=new Chart($('bm_batch_dist'),{type:'bar',data:{labels:cd.labels,datasets:[{label:'平均距离(m)',data:cd.datasets.avg_distance,backgroundColor:colors,borderRadius:6}]},options:chOpts2});
+  _charts.bmBatchNodes=new Chart($('bm_batch_nodes'),{type:'bar',data:{labels:cd.labels,datasets:[{label:'平均访问节点',data:cd.datasets.avg_nodes,backgroundColor:colors,borderRadius:6}]},options:chOpts2});
+  _charts.bmBatchTime=new Chart($('bm_batch_time'),{type:'bar',data:{labels:cd.labels,datasets:[{label:'平均耗时(ms)',data:cd.datasets.avg_time,backgroundColor:colors,borderRadius:6}]},options:chOpts2});
+  // Optimality chart
+  if(_charts.bmOptimality){_charts.bmOptimality.destroy();_charts.bmOptimality=null}
+  var optKeys=Object.keys(cd.optimality),optVals=Object.keys(cd.optimality).map(function(k){return cd.optimality[k]*100});
+  _charts.bmOptimality=new Chart($('bm_optimality'),{type:'bar',data:{labels:optKeys,datasets:[{label:'最优率(%)',data:optVals,backgroundColor:colors.slice(0,optKeys.length),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#94a3b8',font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'}},
+              y:{ticks:{color:'#94a3b8',font:{size:10},callback:function(v){return v.toFixed(0)+'%'}},grid:{color:'rgba(255,255,255,0.05)'},max:100}}}});
+  // Batch summary table
+  var agg=r.data.aggregate;
+  var algoLabels=['bfs','dijkstra','a_star_euclidean','a_star_manhattan','a_star_floor_aware','bidirectional_bfs','bidirectional_dijkstra'];
+  var bestAvgDist=Math.min.apply(null,algoLabels.map(function(a){return agg.avg_distance_m[a]||Infinity}));
+  var bestAvgNodes=Math.min.apply(null,algoLabels.map(function(a){return agg.avg_nodes_visited[a]||Infinity}));
+  var bestAvgTime=Math.min.apply(null,algoLabels.map(function(a){return agg.avg_time_ms[a]||Infinity}));
+  $('bm_batch_table').innerHTML='<thead><tr><th>算法</th><th>平均距离(m)</th><th>平均访问节点</th><th>平均耗时(ms)</th><th>最优率</th></tr></thead><tbody>'+
+    algoLabels.map(function(a){
+      return'<tr><td><code>'+esc(a)+'</code></td>'+
+        '<td class="'+(agg.avg_distance_m[a]===bestAvgDist?'best-val':'')+'">'+fmtNum(agg.avg_distance_m[a])+'</td>'+
+        '<td class="'+(agg.avg_nodes_visited[a]===bestAvgNodes?'best-val':'')+'">'+fmtInt(agg.avg_nodes_visited[a])+'</td>'+
+        '<td class="'+(agg.avg_time_ms[a]===bestAvgTime?'best-val':'')+'">'+fmtNum(agg.avg_time_ms[a])+'</td>'+
+        '<td>'+(a==='dijkstra'?'基准':(cd.optimality[a]!==undefined?(cd.optimality[a]*100).toFixed(0)+'%':'N/A'))+'</td></tr>';
+    }).join('')+'</tbody>';
+  toast('批量基准测试完成: '+cd.scenario_count+'个场景','success');
+}
+
+/* ============================================================
+   PAGE 5: ACCESSIBLE (ENHANCED: wheelchair icons, elevator wait, green path)
+   ============================================================ */
+function renderAccessible(){
+  return '<div class="row g-3">'+
+    '<div class="col-lg-3">'+
+      '<div class="card card-custom"><div class="card-header"><i class="fa-solid fa-wheelchair-move me-2"></i>无障碍路径</div>'+
+      '<div class="card-body">'+
+        '<div class="alert" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;color:#86efac;font-size:12px"><i class="fa-solid fa-circle-info me-1"></i>无障碍模式仅使用电梯，自动避开所有楼梯。绿色路径 = 轮椅可通行。</div>'+
+        '<label class="form-label">起点</label><select class="form-select mb-2" id="ac_start"></select>'+
+        '<label class="form-label">终点</label><select class="form-select mb-3" id="ac_goal"></select>'+
+        '<label class="form-label"><i class="fa-solid fa-clock me-1"></i>电梯等待时间 (秒)</label>'+
+        '<input type="range" class="form-range mb-2" id="ac_wait" min="0" max="120" value="30" step="5" oninput="$(\'ac_wait_val\').textContent=this.value+\'s\'">'+
+        '<div class="d-flex justify-content-between mb-3"><span class="text-muted small">0s (瞬时)</span><span class="badge badge-accent" id="ac_wait_val">30s</span><span class="text-muted small">120s</span></div>'+
+        '<button class="btn btn-success-accessible btn-rounded w-100 mb-2" onclick="findAccessible()"><i class="fa-solid fa-wheelchair me-1"></i>查找无障碍路径</button>'+
+        '<button class="btn btn-accent btn-rounded w-100 mb-2" onclick="compareAccessible()"><i class="fa-solid fa-code-compare me-1"></i>对比标准路径</button>'+
+        '<button class="btn btn-outline-light btn-rounded w-100 btn-sm" onclick="findAccessibleNoWait()"><i class="fa-solid fa-bolt me-1"></i>零等待快速路径</button>'+
+      '</div></div>'+
+      '<div class="card card-custom"><div class="card-header">楼层切换</div><div class="card-body text-center" id="ac_floors"></div></div>'+
+    '</div>'+
+    '<div class="col-lg-9">'+
+      '<div class="canvas-wrap mb-3"><canvas id="ac_canvas" style="width:100%;height:520px"></canvas></div>'+
+      '<div class="info-bar mb-3">'+
+        '<span><i class="fa-solid fa-route"></i>距离: <b class="val" id="ai_dist">-</b></span>'+
+        '<span><i class="fa-solid fa-eye"></i>访问节点: <b class="val" id="ai_visited">-</b></span>'+
+        '<span><i class="fa-solid fa-clock"></i>耗时: <b class="val" id="ai_time">-</b></span>'+
+        '<span><i class="fa-solid fa-universal-access"></i>可通行: <b class="val" id="ai_ok">-</b></span>'+
+        '<span><i class="fa-solid fa-elevator"></i>乘梯: <b class="val" id="ai_rides">-</b></span>'+
+        '<span><i class="fa-solid fa-hourglass-half"></i>预计总时间: <b class="val" id="ai_total_time">-</b></span>'+
+      '</div>'+
+      '<div class="card card-custom" id="ac_dir_panel" style="display:none"><div class="card-header"><i class="fa-solid fa-person-walking me-2"></i>文本指引</div>'+
+      '<div class="card-body" id="ac_dir_steps" style="max-height:300px;overflow-y:auto"></div></div>'+
+    '</div></div>';
+}
+
+var _acRenderer=null,_acFloor=1,_acAllNodes=[];
+
+async function initAccessible(){
+  var r=await api('/api/building/all-nodes');if(!r.success)return;
+  _acAllNodes=(r.data.nodes||[]).sort(function(a,b){return a.node_id.localeCompare(b.node_id)});
+  var opt='<option value="">-- 选择 --</option>';
+  _acAllNodes.forEach(function(n){opt+='<option value="'+esc(n.node_id)+'">'+esc(n.name)+' ('+esc(n.node_id)+')</option>'});
+  if($('ac_start'))$('ac_start').innerHTML=opt;if($('ac_goal'))$('ac_goal').innerHTML=opt;
+  var bR=await api('/api/building');var floors=bR.success?bR.data.floors:[1,2,3,4];
+  $('ac_floors').innerHTML=floors.map(function(f){return'<span class="floor-tab'+(f===_acFloor?' active':'')+'" onclick="switchAcFloor('+f+')">'+f+'F</span>'}).join('');
+  var canvas=$('ac_canvas');if(canvas)_acRenderer=new AccessibleMapRenderer(canvas);
+  await switchAcFloor(_acFloor);
+}
+
+async function switchAcFloor(floor){_acFloor=floor;
+  document.querySelectorAll('#ac_floors .floor-tab').forEach(function(t){t.classList.toggle('active',t.textContent===floor+'F')});
+  var r=await api('/api/building/floor/'+floor);if(r.success&&_acRenderer)_acRenderer.loadFloor(r.data);
+}
+
+async function findAccessible(){
+  var start=$('ac_start').value,goal=$('ac_goal').value;
+  if(!start||!goal){toast('请选择起点和终点','error');return}
+  var waitTime=parseInt($('ac_wait').value)||0;
+  var r=await api('/api/accessible-path',{method:'POST',body:{start:start,goal:goal,elevator_wait_time_s:waitTime}});
+  if(!r.success){toast(r.message,'error');return}var d=r.data;
+  displayAccessibleResult(d,start,goal);
+}
+
+async function findAccessibleNoWait(){
+  var start=$('ac_start').value,goal=$('ac_goal').value;
+  if(!start||!goal){toast('请选择起点和终点','error');return}
+  $('ac_wait').value=0;$('ac_wait_val').textContent='0s';
+  var r=await api('/api/accessible-path',{method:'POST',body:{start:start,goal:goal,elevator_wait_time_s:0}});
+  if(!r.success){toast(r.message,'error');return}var d=r.data;
+  displayAccessibleResult(d,start,goal);
+}
+
+function displayAccessibleResult(d,start,goal){
+  $('ai_dist').textContent=fmtDist(d.total_distance);$('ai_visited').textContent=d.nodes_visited;
+  $('ai_time').textContent=fmtNum(d.execution_time_ms)+' ms';
+  $('ai_ok').textContent=d.accessible?'✓ 可通行':'✗ 不可通行';
+  $('ai_ok').style.color=d.accessible?'var(--success)':'var(--danger)';
+  $('ai_rides').textContent=(d.elevator_rides||0)+' 次';
+  $('ai_total_time').textContent=d.estimated_total_time_s?fmtNum(d.estimated_total_time_s)+'s':'-';
+  if(_acRenderer&&d.path){
+    var state={};d.path.forEach(function(nid){state[nid]='path'});state[start]='start';state[goal]='goal';
+    _acRenderer.setState(state,d.path);
+    // Also mark elevators with wheelchair symbol
+    _acRenderer.setAccessible(true);
+  }
+  var dirR=api('/api/directions',{method:'POST',body:{path:d.path}}).then(function(dirR){
+    var panel=$('ac_dir_panel'),steps=$('ac_dir_steps');
+    if(dirR.success&&panel&&steps){panel.style.display='block';
+      steps.innerHTML=(dirR.data.directions||[]).map(function(dd){
+        var cls=dd.action==='arrive'?'arrive':(dd.action==='take_elevator'?'accessible':'');
+        return'<div class="dir-step"><div class="dir-step-num '+cls+'">'+(dd.action==='arrive'?'<i class="fa-solid fa-flag-checkered"></i>':(dd.action==='take_elevator'?'<i class="fa-solid fa-wheelchair"></i>':dd.step))+'</div><div><div class="dir-instruction">'+esc(dd.instruction)+'</div><div class="dir-meta">'+esc(dd.from_node.name)+' → '+esc(dd.to_node.name)+'</div></div></div>';
+      }).join('')}
+  });
+  toast(d.accessible?'无障碍路径规划成功':'警告: 此路径不可通行','success');
+}
+
+async function compareAccessible(){
+  var start=$('ac_start').value,goal=$('ac_goal').value;
+  if(!start||!goal){toast('请选择起点和终点','error');return}
+  var waitTime=parseInt($('ac_wait').value)||0;
+  var results=await Promise.all([
+    api('/api/path',{method:'POST',body:{start:start,goal:goal}}),
+    api('/api/accessible-path',{method:'POST',body:{start:start,goal:goal,elevator_wait_time_s:waitTime}})
+  ]);
+  var std=results[0].success?results[0].data:{},acc=results[1].success?results[1].data:{};
+  $('ac_dir_panel').style.display='block';
+  $('ac_dir_steps').innerHTML='<table class="table table-custom table-sm mb-0"><thead><tr><th>指标</th><th>标准路径</th><th>无障碍路径</th></tr></thead><tbody>'+
+    '<tr><td>距离</td><td>'+fmtDist(std.total_distance||0)+'</td><td>'+fmtDist(acc.total_distance||0)+'</td></tr>'+
+    '<tr><td>访问节点</td><td>'+(std.nodes_visited||'-')+'</td><td>'+(acc.nodes_visited||'-')+'</td></tr>'+
+    '<tr><td>耗时</td><td>'+fmtNum(std.execution_time_ms||0)+' ms</td><td>'+fmtNum(acc.execution_time_ms||0)+' ms</td></tr>'+
+    '<tr><td>路径节点数</td><td>'+(std.path?std.path.length:0)+'</td><td>'+(acc.path?acc.path.length:0)+'</td></tr>'+
+    '<tr><td>乘梯次数</td><td class="text-muted">--</td><td>'+(acc.elevator_rides||0)+' 次</td></tr>'+
+    '<tr><td>预计总时间</td><td class="text-muted">--</td><td>'+(acc.estimated_total_time_s?fmtNum(acc.estimated_total_time_s)+'s':'N/A')+'</td></tr>'+
+    '<tr><td>无障碍通行</td><td class="text-muted">--</td><td>'+(acc.accessible?'<span class="text-success">✓ 可通行</span>':'<span class="text-danger">✗ 不可通行</span>')+'</td></tr></tbody></table>';
+  toast('对比完成','success');
+}
+
+/* ============================================================
+   PAGE 6: VALIDATE (ENHANCED: degree histogram, isolated nodes)
+   ============================================================ */
+function renderValidate(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-shield-check text-primary me-2"></i>系统诊断</h3>'+
+    '<p class="text-secondary small mb-3">建筑物结构验证 · 图论统计 · 度分布直方图 · 孤立节点检测</p>'+
+    '<div class="row g-3" id="validate_content"><div class="col-12 text-center py-5"><span class="text-muted">加载中...</span></div></div>';
+}
+
+async function loadValidate(){
+  var results=await Promise.all([api('/api/building/validate'),api('/api/building/stats'),api('/api/building/degree-distribution'),api('/api/building/isolated-nodes')]);
+  var v=results[0].success?results[0].data:{},s=results[1].success?results[1].data:{};
+  var ddist=results[2].success?results[2].data:{},isonodes=results[3].success?results[3].data:{};
+  var area=$('validate_content');if(!area)return;
+  var statusIcon=v.valid?'<i class="fa-solid fa-circle-check text-success fa-2x"></i>':'<i class="fa-solid fa-triangle-exclamation text-warning fa-2x"></i>';
+  var statusText=v.valid?'系统健康 — 未发现问题':'发现问题 — 共 '+v.issue_count+' 项';
+  var issuesHtml='';
+  if(v.issues&&v.issues.length>0){issuesHtml='<div class="mt-2">'+v.issues.map(function(i){return'<div class="text-danger small"><i class="fa-solid fa-xmark me-1"></i>'+esc(i)+'</div>'}).join('')+'</div>'}
+  var floorLabels=[],floorCounts=[];
+  if(s.nodes_per_floor){Object.keys(s.nodes_per_floor).sort().forEach(function(f){floorLabels.push(f+'F');floorCounts.push(s.nodes_per_floor[f])})}
+
+  // Build isolated nodes HTML
+  var isoNodes=isonodes.isolated_nodes||[];
+  var isoHtml='';
+  if(isoNodes.length>0){
+    isoHtml='<div class="mt-3"><label class="form-label"><i class="fa-solid fa-triangle-exclamation text-danger me-1"></i>孤立节点 (无连接) — '+isoNodes.length+' 个</label>'+
+      '<div class="d-flex flex-wrap gap-1">'+isoNodes.map(function(n){
+        return'<span class="badge badge-danger isolated-badge" style="cursor:pointer" onclick="jumpToNav(\''+esc(n.node_id)+'\',\'\')" title="'+esc(n.name)+' · '+n.floor+'F · ('+fmtNum(n.x)+','+fmtNum(n.y)+')">'+esc(n.node_id)+' <small>('+n.floor+'F)</small></span>';
+      }).join('')+'</div></div>';
+  }else{
+    isoHtml='<div class="mt-3"><span class="text-success small"><i class="fa-solid fa-circle-check me-1"></i>无孤立节点 — 所有节点均已连接</span></div>';
+  }
+
+  area.innerHTML=
+    '<div class="col-12"><div class="card card-custom"><div class="card-body d-flex align-items-center gap-3">'+statusIcon+'<div><h5 class="mb-0">'+statusText+'</h5><p class="text-muted small mb-0">'+(s.total_nodes||0)+' 节点 · '+(s.total_edges||0)+' 边 · '+(s.floors||[]).length+' 楼层</p></div></div>'+issuesHtml+isoHtml+'</div></div>'+
+    '<div class="col-md-4"><div class="card card-custom"><div class="card-header">度分布</div><div class="card-body">'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">平均度</span><span class="fw-bold">'+(s.avg_degree||'-')+'</span></div>'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">最大度</span><span class="fw-bold text-success">'+(s.max_degree||'-')+'</span></div>'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">最小度</span><span class="fw-bold text-danger">'+(s.min_degree===Infinity?'-':s.min_degree)+'</span></div>'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">连通性</span><span class="fw-bold">'+((s.connectivity_score||0)*100).toFixed(1)+'%</span></div>'+
+    '</div></div></div>'+
+    '<div class="col-md-4"><div class="card card-custom"><div class="card-header">边权重</div><div class="card-body">'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">最长边</span><span class="fw-bold">'+fmtDist(s.longest_edge||0)+'</span></div>'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">最短边</span><span class="fw-bold">'+fmtDist(s.shortest_edge===Infinity?0:s.shortest_edge)+'</span></div>'+
+      '<div class="d-flex justify-content-between"><span class="text-muted small">平均权重</span><span class="fw-bold">'+fmtDist(s.edge_weight_avg||0)+'</span></div>'+
+    '</div></div></div>'+
+    '<div class="col-md-4"><div class="card card-custom"><div class="card-header">节点类型</div><div class="card-body">'+
+      (s.node_types?Object.keys(s.node_types).map(function(k){return'<div class="d-flex justify-content-between"><span class="text-muted small">'+esc(k)+'</span><span class="badge badge-primary">'+s.node_types[k]+'</span></div>'}).join(''):'<span class="text-muted">-</span>')+
+    '</div></div></div>'+
+    '<div class="col-md-6"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-chart-column me-1"></i>各楼层节点分布</div><div class="card-body"><canvas id="val_floor_chart" height="200"></canvas></div></div></div>'+
+    '<div class="col-md-6"><div class="card card-custom"><div class="card-header"><i class="fa-solid fa-chart-simple me-1"></i>节点度分布直方图</div><div class="card-body"><canvas id="val_degree_hist" height="200"></canvas></div></div></div>';
+
+  setTimeout(function(){
+    // Floor bar chart
+    var canvas1=$('val_floor_chart');if(canvas1){if(_charts.valFloor){_charts.valFloor.destroy();_charts.valFloor=null}
+      _charts.valFloor=new Chart(canvas1,{type:'bar',data:{labels:floorLabels,datasets:[{data:floorCounts,backgroundColor:['#3b82f6','#06b6d4','#10b981','#8b5cf6'],borderRadius:8}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+          scales:{x:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.05)'},beginAtZero:true}}}})}
+
+    // Degree distribution histogram
+    var canvas2=$('val_degree_hist');if(canvas2){
+      if(_charts.valDegHist){_charts.valDegHist.destroy();_charts.valDegHist=null}
+      var hist=ddist.histogram||[];
+      var histLabels=hist.map(function(h){return h.label});
+      var histCounts=hist.map(function(h){return h.count});
+      var histColors=hist.map(function(h){return h.count===0?'rgba(239,68,68,0.5)':'rgba(59,130,246,0.6)'});
+      _charts.valDegHist=new Chart(canvas2,{type:'bar',data:{labels:histLabels,datasets:[{data:histCounts,backgroundColor:histColors,borderRadius:6,borderColor:histColors.map(function(c){return c.replace('0.5','0.8').replace('0.6','0.8')}),borderWidth:1}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.raw+' 个节点'}}}},
+          scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'},title:{display:true,text:'节点度数',color:'#94a3b8'}},
+                  y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'},beginAtZero:true,title:{display:true,text:'节点数量',color:'#94a3b8'}}}}});
+    }
+  },200);
+}
+
+/* ============================================================
+   PAGE 7: ABOUT (ENHANCED: pseudocode)
+   ============================================================ */
+function renderAbout(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-circle-info text-primary me-2"></i>关于系统</h3>'+
+    '<p class="text-secondary small mb-3">CampusPath v2.0 · 智慧校园室内导航系统</p>'+
+    '<div class="accordion accordion-custom" id="about_acc">'+
+      '<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#ab1"><i class="fa-solid fa-building-columns me-2"></i>系统概述</button></h2>'+
+      '<div id="ab1" class="accordion-collapse collapse show" data-bs-parent="#about_acc"><div class="accordion-body">'+
+        '<p>CampusPath 是数据结构与算法课程设计的完整Web实现，为计算机学院教学楼A提供室内路径导航服务。</p>'+
+        '<p class="mb-0"><b>核心特性:</b></p><ul class="mb-0"><li>4层教学楼地图（74个节点，140+条边），含教室/走廊/楼梯/电梯/POI设施</li>'+
+        '<li>7种路径搜索算法变体，全部手写数据结构（MinHeap、Queue、Stack、AdjacencyListGraph）</li>'+
+        '<li>Dark Sci-Fi UI：玻璃态卡片、渐变背景、实时Canvas地图渲染</li><li>无障碍导航模式、算法基准测试、图论统计分析</li></ul></div></div></div>'+
+      '<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#ab2"><i class="fa-solid fa-diagram-project me-2"></i>数据结构</button></h2>'+
+      '<div id="ab2" class="accordion-collapse collapse" data-bs-parent="#about_acc"><div class="accordion-body">'+
+        '<table class="table table-custom table-sm"><thead><tr><th>数据结构</th><th>实现</th><th>复杂度</th><th>应用场景</th></tr></thead><tbody>'+
+        '<tr><td>MinHeap 最小堆</td><td>手写二叉堆+位置映射</td><td>O(log n)</td><td>Dijkstra & A* 优先级队列</td></tr>'+
+        '<tr><td>Queue 队列</td><td>数组+头指针</td><td>O(1) 入/出队</td><td>BFS 搜索边界</td></tr>'+
+        '<tr><td>Stack 栈</td><td>数组封装</td><td>O(1) push/pop</td><td>路径重构</td></tr>'+
+        '<tr><td>AdjacencyListGraph</td><td>HashMap+邻接表</td><td>O(1) 查边</td><td>建筑物拓扑</td></tr>'+
+        '<tr><td>HashMap</td><td>Python dict 内置</td><td>O(1) 查找</td><td>节点索引</td></tr></tbody></table></div></div></div>'+
+      '<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#ab3"><i class="fa-solid fa-code me-2"></i>算法详解与伪代码</button></h2>'+
+      '<div id="ab3" class="accordion-collapse collapse" data-bs-parent="#about_acc"><div class="accordion-body">'+
+        renderPseudocode()+
+      '</div></div></div>'+
+      '<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#ab4"><i class="fa-solid fa-server me-2"></i>技术栈</button></h2>'+
+      '<div id="ab4" class="accordion-collapse collapse" data-bs-parent="#about_acc"><div class="accordion-body">'+
+        '<table class="table table-custom table-sm"><thead><tr><th>层级</th><th>技术</th><th>说明</th></tr></thead><tbody>'+
+        '<tr><td>后端</td><td>Flask 3.x + Python</td><td>13个REST API端点</td></tr>'+
+        '<tr><td>前端</td><td>Bootstrap 5.3 + Vanilla JS</td><td>SPA单页，Dark Sci-Fi主题</td></tr>'+
+        '<tr><td>图表</td><td>Chart.js 4.4</td><td>性能对比可视化</td></tr>'+
+        '<tr><td>地图</td><td>HTML5 Canvas 2D</td><td>DPR感知渲染引擎</td></tr>'+
+        '<tr><td>数据</td><td>JSON 结构化</td><td>建筑物地图定义</td></tr>'+
+        '<tr><td>部署</td><td>GitHub Pages + Flask</td><td>前后端分离</td></tr></tbody></table></div></div></div>'+
+      '<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#ab5"><i class="fa-solid fa-flask me-2"></i>测试覆盖</button></h2>'+
+      '<div id="ab5" class="accordion-collapse collapse" data-bs-parent="#about_acc"><div class="accordion-body">'+
+        '<p>69个测试用例，覆盖全部核心模块：</p><ul class="mb-0">'+
+        '<li><b>MinHeap</b>: 12 cases — push/pop/decrease_key/1000-op stress</li>'+
+        '<li><b>Graph</b>: 16 cases — CRUD/serialization</li>'+
+        '<li><b>Dijkstra</b>: 8 cases — simple/disconnected/multi-floor</li>'+
+        '<li><b>A*</b>: 13 cases — 3 heuristics/admissibility</li>'+
+        '<li><b>BFS+Bidirectional</b>: 7 cases — correctness/speed</li>'+
+        '<li><b>Building</b>: 13 cases — loading/validation/batch</li></ul></div></div></div>'+
+    '</div>';
+}
+
+function renderPseudocode(){
+  return '<div class="row g-3">'+
+    // Dijkstra
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-route me-1"></i>Dijkstra 最短路径</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="kw">function</span> <span class="fn">DIJKSTRA</span>(graph, start, goal):\n'+
+    '  dist[start] ← 0; prev ← {}\n'+
+    '  pq ← MinHeap.heapify([(0, start)])\n'+
+    '  visited ← 0\n'+
+    '  <span class="kw">while</span> pq <span class="kw">not</span> empty:\n'+
+    '    (d, u) ← pq.pop()\n'+
+    '    <span class="kw">if</span> u == goal: <span class="kw">break</span>\n'+
+    '    visited ← visited + 1\n'+
+    '    <span class="kw">for</span> (v, w) <span class="kw">in</span> neighbors(u):\n'+
+    '      <span class="kw">if</span> dist[u] + w < dist[v]:\n'+
+    '        dist[v] ← dist[u] + w\n'+
+    '        prev[v] ← u\n'+
+    '        pq.decrease_key(v, dist[v])\n'+
+    '  <span class="kw">return</span> reconstruct_path(prev, goal)\n'+
+    '  <span class="cm"># 时间: O((V+E)log V) · 空间: O(V)</span></div></div></div></div>'+
+    // A*
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-star me-1"></i>A* 启发式搜索</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="kw">function</span> <span class="fn">A_STAR</span>(graph, start, goal, h):\n'+
+    '  g[start] ← 0; f[start] ← h(start, goal)\n'+
+    '  open ← MinHeap.heapify([(f[start], start)])\n'+
+    '  <span class="kw">while</span> open <span class="kw">not</span> empty:\n'+
+    '    (f_u, u) ← open.pop()\n'+
+    '    <span class="kw">if</span> u == goal: <span class="kw">break</span>\n'+
+    '    <span class="kw">for</span> (v, w) <span class="kw">in</span> neighbors(u):\n'+
+    '      g_new ← g[u] + w\n'+
+    '      <span class="kw">if</span> g_new < g[v]:\n'+
+    '        g[v] ← g_new; f[v] ← g_new + h(v, goal)\n'+
+    '        prev[v] ← u; open.decrease_key(v, f[v])\n'+
+    '  <span class="kw">return</span> reconstruct_path(prev, goal)\n'+
+    '  <span class="cm"># 启发式 h(n): 欧几里得/曼哈顿/楼层感知\n'+
+    '  # 可纳条件: h(n) ≤ d(n, goal)</span></div></div></div></div>'+
+    // BFS
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-arrow-right me-1"></i>BFS 广度优先搜索</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="kw">function</span> <span class="fn">BFS</span>(graph, start, goal):\n'+
+    '  queue ← Queue([start])\n'+
+    '  visited ← {start}; prev ← {}\n'+
+    '  <span class="kw">while</span> queue <span class="kw">not</span> empty:\n'+
+    '    u ← queue.dequeue()\n'+
+    '    <span class="kw">if</span> u == goal: <span class="kw">break</span>\n'+
+    '    <span class="kw">for</span> (v, w) <span class="kw">in</span> neighbors(u):\n'+
+    '      <span class="kw">if</span> v <span class="kw">not in</span> visited:\n'+
+    '        visited.add(v); prev[v] ← u\n'+
+    '        queue.enqueue(v)\n'+
+    '  <span class="kw">return</span> reconstruct_path(prev, goal)\n'+
+    '  <span class="cm"># 时间: O(V+E) · 无权图最短路径</span></div></div></div></div>'+
+    // Bidirectional BFS
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-arrows-left-right me-1"></i>双向 BFS</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="kw">function</span> <span class="fn">BIDIRECTIONAL_BFS</span>(graph, start, goal):\n'+
+    '  fwd_q ← Queue([start]); bwd_q ← Queue([goal])\n'+
+    '  fwd_visited ← {start}; bwd_visited ← {goal}\n'+
+    '  fwd_prev ← {}; bwd_prev ← {}\n'+
+    '  <span class="kw">while</span> fwd_q <span class="kw">and</span> bwd_q <span class="kw">not</span> empty:\n'+
+    '    <span class="cm">// 从较小边界扩展</span>\n'+
+    '    <span class="kw">if</span> |fwd_q| ≤ |bwd_q|:\n'+
+    '      meeting ← expand(fwd_q, fwd_visited,\n'+
+    '                     bwd_visited, fwd_prev)\n'+
+    '    <span class="kw">else</span>:\n'+
+    '      meeting ← expand(bwd_q, bwd_visited,\n'+
+    '                     fwd_visited, bwd_prev)\n'+
+    '    <span class="kw">if</span> meeting: <span class="kw">break</span>\n'+
+    '  <span class="kw">return</span> merge_paths(fwd_prev, bwd_prev, meeting)\n'+
+    '  <span class="cm"># 访问节点 ~ 2·b^(d/2) vs BFS b^d</span></div></div></div></div>'+
+    // Bidirectional Dijkstra
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-code-merge me-1"></i>双向 Dijkstra</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="kw">function</span> <span class="fn">BI_DIRECTED_DIJKSTRA</span>(graph, start, goal):\n'+
+    '  fwd_dist ← {start: 0}; bwd_dist ← {goal: 0}\n'+
+    '  fwd_pq ← MinHeap([(0, start)])\n'+
+    '  bwd_pq ← MinHeap([(0, goal)])\n'+
+    '  best_dist ← ∞; meeting ← null\n'+
+    '  <span class="kw">while</span> fwd_pq <span class="kw">and</span> bwd_pq <span class="kw">not</span> empty:\n'+
+    '    fwd_min ← fwd_pq.peak_min()\n'+
+    '    bwd_min ← bwd_pq.peak_min()\n'+
+    '    <span class="kw">if</span> fwd_min + bwd_min ≥ best_dist:\n'+
+    '      <span class="kw">break</span> <span class="cm">// 终止条件</span>\n'+
+    '    expand_smaller(fwd_pq, bwd_pq)\n'+
+    '    update_best_dist()\n'+
+    '  <span class="kw">return</span> best_path\n'+
+    '  <span class="cm"># 终止保证最优: fwd_min+bwd_min≥best_dist</span></div></div></div></div>'+
+    // 启发函数说明
+    '<div class="col-lg-6"><div class="card card-custom"><div class="card-header" style="font-size:13px"><i class="fa-solid fa-ruler me-1"></i>启发函数 (Heuristics)</div><div class="card-body p-3">'+
+    '<div class="pseudo-block"><span class="cm"># 1. 欧几里得距离</span>\n'+
+    '<span class="fn">h_euclidean</span>(a, b) =\n'+
+    '  √[(x_a-x_b)² + (y_a-y_b)²]\n'+
+    '\n'+
+    '<span class="cm"># 2. 曼哈顿距离</span>\n'+
+    '<span class="fn">h_manhattan</span>(a, b) =\n'+
+    '  |x_a-x_b| + |y_a-y_b|\n'+
+    '\n'+
+    '<span class="cm"># 3. 楼层感知 (核心创新)</span>\n'+
+    '<span class="fn">h_floor_aware</span>(a, b) =\n'+
+    '  √[(x_a-x_b)² + (y_a-y_b)²]\n'+
+    '  + |floor_a - floor_b| × <span class="num">4.0</span>\n'+
+    '  <span class="cm"># 层高4m，垂直移动惩罚</span></div></div></div></div>'+
+    '</div>';
+}
+
+/* ============================================================
+   SMART NAV RENDERER — renders NavGraph maps on Canvas
+   ============================================================ */
+class SmartNavRenderer{
+  constructor(canvas){
+    this.canvas=canvas;this.ctx=canvas.getContext('2d');
+    this.nodes=[];this.edges=[];this.nodeMap={};
+    this.state={};this.highlightPath=[];this.vehicles=[];
+    this.scaleX=1;this.scaleY=1;this.offsetX=0;this.offsetY=0;
+    this.minX=0;this.minY=0;this.maxX=1000;this.maxY=600;
+    this.hoveredNode=null;this.tooltipEl=null;
+    // Zoom/Pan state (Phase D)
+    this.zoom=1;this.panX=0;this.panY=0;
+    this.minZoom=0.3;this.maxZoom=4;
+    this._dragStartX=0;this._dragStartY=0;this._isDragging=false;this._dragMoved=false;
+    // Floor state (Phase E)
+    this.activeFloor=null;this.floors=[];
+    // Vehicle animation
+    this._vehAnim={prev:{},target:{},smoothed:{},animId:null,lastTime:0,active:false};
+    // Label collision tracking (Phase C)
+    this._placedLabels=[];
+    this._resize();window.addEventListener('resize',()=>this._resize());
+    this._bindZoomPan();
+  }
+  _resize(){
+    var dpr=window.devicePixelRatio||1;
+    var rect=this.canvas.getBoundingClientRect();
+    this.canvas.width=rect.width*dpr;this.canvas.height=rect.height*dpr;
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    this.viewW=rect.width;this.viewH=rect.height;
+  }
+
+  // ── Zoom/Pan binding (Phase D) ──
+  _bindZoomPan(){
+    var self=this;
+    this.canvas.addEventListener('wheel',function(e){e.preventDefault();self._onWheel(e)});
+    this.canvas.addEventListener('mousedown',function(e){self._onMouseDown(e)});
+    this.canvas.addEventListener('mousemove',function(e){self._onMouseMove(e)});
+    this.canvas.addEventListener('mouseup',function(e){self._onMouseUp(e)});
+    this.canvas.addEventListener('mouseleave',function(e){self._isDragging=false});
+  }
+  _onWheel(e){
+    var rect=this.canvas.getBoundingClientRect();
+    var mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    var oldZoom=this.zoom;
+    var delta=e.deltaY>0?-0.12:0.12;
+    this.zoom=Math.max(this.minZoom,Math.min(this.maxZoom,this.zoom+delta));
+    // Zoom toward mouse position
+    var ratio=this.zoom/oldZoom;
+    this.panX=mx-(mx-this.panX)*ratio;
+    this.panY=my-(my-this.panY)*ratio;
+    this.render();
+  }
+  _onMouseDown(e){
+    this._dragStartX=e.clientX;this._dragStartY=e.clientY;
+    this._isDragging=true;this._dragMoved=false;
+  }
+  _onMouseMove(e){
+    if(!this._isDragging)return;
+    var dx=e.clientX-this._dragStartX,dy=e.clientY-this._dragStartY;
+    if(Math.abs(dx)>2||Math.abs(dy)>2)this._dragMoved=true;
+    this.panX+=dx;this.panY+=dy;
+    this._dragStartX=e.clientX;this._dragStartY=e.clientY;
+    this.render();
+  }
+  _onMouseUp(e){
+    this._isDragging=false;
+    // Delegate clicks (not drags) to external handler via custom event
+    if(!this._dragMoved){
+      var rect=this.canvas.getBoundingClientRect();
+      var nid=this.hitTest(e.clientX,e.clientY);
+      if(nid)this.canvas.dispatchEvent(new CustomEvent('node-click',{detail:{nodeId:nid}}));
+    }
+  }
+
+  // ── Scene loading ──
+  loadScene(nodes,edges){
+    this.nodes=nodes||[];this.edges=edges||[];this.nodeMap={};
+    for(var i=0;i<this.nodes.length;i++)this.nodeMap[this.nodes[i].node_id]=this.nodes[i];
+    // Extract floors (Phase E)
+    var floorSet={};
+    for(var i=0;i<this.nodes.length;i++){
+      var f=this.nodes[i].floor;if(f!==undefined&&f!==null)floorSet[f]=true;
+    }
+    this.floors=Object.keys(floorSet).map(Number).sort(function(a,b){return a-b});
+    this.activeFloor=null; // default: show all
+    // Compute bounds
+    if(this.nodes.length>0){
+      this.minX=Infinity;this.minY=Infinity;this.maxX=-Infinity;this.maxY=-Infinity;
+      for(var i=0;i<this.nodes.length;i++){
+        var n=this.nodes[i];
+        if(n.x<this.minX)this.minX=n.x;if(n.y<this.minY)this.minY=n.y;
+        if(n.x>this.maxX)this.maxX=n.x;if(n.y>this.maxY)this.maxY=n.y;
+      }
+      var pad=40;this.offsetX=pad;this.offsetY=pad;
+      this.scaleX=(this.viewW-pad*2)/(this.maxX-this.minX||1);
+      this.scaleY=(this.viewH-pad*2)/(this.maxY-this.minY||1);
+    }
+    // Reset zoom/pan
+    this.zoom=1;this.panX=0;this.panY=0;
+    // Update floor buttons
+    this._updateFloorButtons();
+    this.render();
+  }
+
+  // ── Coordinate transform with zoom/pan (Phase D) ──
+  _toPixel(nx,ny){
+    var sx=(nx-this.minX)*this.scaleX+this.offsetX;
+    var sy=(ny-this.minY)*this.scaleY+this.offsetY;
+    return {
+      x:(sx-this.viewW/2)*this.zoom+this.viewW/2+this.panX,
+      y:(sy-this.viewH/2)*this.zoom+this.viewH/2+this.panY
+    };
+  }
+
+  // ── Floor filtering (Phase E) ──
+  _getVisibleNodes(){
+    var self=this;
+    if(this.activeFloor===null||this.activeFloor===undefined)return this.nodes;
+    return this.nodes.filter(function(n){return n.floor===self.activeFloor});
+  }
+  _getVisibleEdges(){
+    var self=this;
+    if(this.activeFloor===null||this.activeFloor===undefined)return this.edges;
+    var visibleNodeIds={};
+    var vn=this._getVisibleNodes();
+    for(var i=0;i<vn.length;i++)visibleNodeIds[vn[i].node_id]=true;
+    return this.edges.filter(function(e){return visibleNodeIds[e.from]&&visibleNodeIds[e.to]});
+  }
+  _getFloorOffsetY(floor){
+    // In "all floors" mode, offset each floor vertically to avoid overlap (Phase E4)
+    if(this.activeFloor!==null||this.floors.length<=1)return 0;
+    var idx=this.floors.indexOf(floor);
+    if(idx<0)return 0;
+    // Spread floors vertically with 200px offset per floor
+    return (idx-Math.floor(this.floors.length/2))*200;
+  }
+  switchFloor(floor){
+    this.activeFloor=(floor===undefined||floor===null)?null:floor;
+    this.render();
+  }
+
+  // ── State setters ──
+  setState(state,path){this.state=state||{};this.highlightPath=path||[];this.render()}
+  setVehicles(vehicles){
+    var a=this._vehAnim;
+    for(var i=0;i<vehicles.length;i++){
+      var v=vehicles[i],vid=v.vehicle_id;
+      a.target[vid]={x:v.x,y:v.y,name:v.name,vehicle_id:vid,
+        status:v.status,speed_kmh:v.speed_kmh,route_path:v.route_path,
+        current_position_index:v.current_position_index};
+      if(!a.smoothed[vid])a.smoothed[vid]={x:v.x,y:v.y};
+      a.prev[vid]={x:a.smoothed[vid].x,y:a.smoothed[vid].y};
+    }
+    var keep={};
+    for(var i=0;i<vehicles.length;i++)keep[vehicles[i].vehicle_id]=true;
+    for(var k in a.prev)if(!keep[k]){delete a.prev[k];delete a.target[k];delete a.smoothed[k]}
+    this.vehicles=vehicles;
+    if(vehicles.length>0)this._startAnimation();
+    else if(a.animId){cancelAnimationFrame(a.animId);a.animId=null;a.active=false}
+  }
+  setTraffic(trafficData){this.trafficData=trafficData||{};this.render()}
+
+  // ── Main render ──
+  render(){
+    var ctx=this.ctx;ctx.clearRect(0,0,this.viewW,this.viewH);
+    this._placedLabels=[]; // reset collision list
+    this._drawGrid();
+    this._drawEdges();
+    this._drawPathHighlight();
+    this._drawNodes();
+    this._drawVehicles();
+    this._drawZoomIndicator();
+  }
+
+  // ── B5: Background grid ──
+  _drawGrid(){
+    var ctx=this.ctx,step=50;
+    ctx.strokeStyle='rgba(148,163,184,0.06)';ctx.lineWidth=0.5;
+    ctx.beginPath();
+    for(var x=0;x<this.viewW;x+=step){ctx.moveTo(x,0);ctx.lineTo(x,this.viewH)}
+    for(var y=0;y<this.viewH;y+=step){ctx.moveTo(0,y);ctx.lineTo(this.viewW,y)}
+    ctx.stroke();
+  }
+
+  // ── B4: Edges colored by road_type ──
+  _drawEdges(){
+    var ctx=this.ctx;
+    // Road type → color+width+dash mapping (B4)
+    var roadStyles={
+      highway:{color:'rgba(239,68,68,0.45)',width:2.5,dash:[]},
+      main_road:{color:'rgba(148,163,184,0.4)',width:2,dash:[]},
+      one_way_street:{color:'rgba(59,130,246,0.4)',width:1.8,dash:[]},
+      bus_lane:{color:'rgba(6,182,212,0.45)',width:1.8,dash:[6,4]},
+      subway_tunnel:{color:'rgba(139,92,246,0.45)',width:2,dash:[8,4]},
+      train_track:{color:'rgba(217,119,6,0.45)',width:2.5,dash:[10,5]},
+      walking_path:{color:'rgba(34,197,94,0.35)',width:1.5,dash:[]},
+      path:{color:'rgba(148,163,184,0.2)',width:1.2,dash:[]}
+    };
+    var visEdges=this._getVisibleEdges();
+    for(var i=0;i<visEdges.length;i++){
+      var e=visEdges[i];
+      var n1=this.nodeMap[e.from],n2=this.nodeMap[e.to];
+      if(!n1||!n2)continue;
+      var floorOffset1=this._getFloorOffsetY(n1.floor);
+      var floorOffset2=this._getFloorOffsetY(n2.floor);
+      var p1=this._toPixel(n1.x,n1.y+floorOffset1);
+      var p2=this._toPixel(n2.x,n2.y+floorOffset2);
+      // Traffic state overrides
+      var isBlocked=false,isCongested=false;
+      if(this.trafficData){
+        if(this.trafficData.blockages){for(var b=0;b<this.trafficData.blockages.length;b++){if(this.trafficData.blockages[b].from===e.from&&this.trafficData.blockages[b].to===e.to){isBlocked=true;break}}}
+        if(this.trafficData.congested_details){for(var c=0;c<this.trafficData.congested_details.length;c++){if(this.trafficData.congested_details[c].from===e.from&&this.trafficData.congested_details[c].to===e.to){isCongested=true;break}}}
+      }
+      if(isBlocked){ctx.strokeStyle='rgba(239,68,68,0.6)';ctx.lineWidth=3;ctx.setLineDash([6,4])}
+      else if(isCongested){ctx.strokeStyle='rgba(245,158,11,0.55)';ctx.lineWidth=2.5;ctx.setLineDash([])}
+      else{
+        var rs=roadStyles[e.road_type]||roadStyles.path;
+        ctx.strokeStyle=rs.color;ctx.lineWidth=rs.width;ctx.setLineDash(rs.dash);
+      }
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  // ── B1-B3: Nodes with full type colors, size hierarchy, glow ──
+  _drawNodes(){
+    var ctx=this.ctx;
+    // Full 14-type color map with fill+glow pairs (B1)
+    var typeColors={
+      entrance:{fill:'rgba(239,68,68,0.7)',glow:'rgba(239,68,68,0.35)'},
+      room:{fill:'rgba(59,130,246,0.6)',glow:'rgba(59,130,246,0.3)'},
+      corridor:{fill:'rgba(148,163,184,0.45)',glow:'rgba(148,163,184,0.2)'},
+      stair:{fill:'rgba(168,85,247,0.55)',glow:'rgba(168,85,247,0.3)'},
+      elevator:{fill:'rgba(139,92,246,0.6)',glow:'rgba(139,92,246,0.35)'},
+      poi:{fill:'rgba(245,158,11,0.75)',glow:'rgba(245,158,11,0.45)'},
+      intersection:{fill:'rgba(100,116,139,0.55)',glow:'rgba(100,116,139,0.25)'},
+      bus_stop:{fill:'rgba(6,182,212,0.7)',glow:'rgba(6,182,212,0.4)'},
+      subway_station:{fill:'rgba(99,102,241,0.7)',glow:'rgba(99,102,241,0.4)'},
+      train_station:{fill:'rgba(217,119,6,0.7)',glow:'rgba(217,119,6,0.4)'},
+      parking:{fill:'rgba(34,197,94,0.6)',glow:'rgba(34,197,94,0.3)'},
+      hospital:{fill:'rgba(239,68,68,0.75)',glow:'rgba(239,68,68,0.45)'},
+      restaurant:{fill:'rgba(236,72,153,0.65)',glow:'rgba(236,72,153,0.35)'},
+      scenic_spot:{fill:'rgba(250,204,21,0.75)',glow:'rgba(250,204,21,0.45)'}
+    };
+    // Node size by type (B2)
+    var typeSizes={
+      entrance:12,poi:13,parking:11,bus_stop:11,subway_station:11,
+      train_station:12,hospital:12,restaurant:11,scenic_spot:12,
+      elevator:9,stair:8,intersection:10,corridor:5,room:8
+    };
+    // Label priority for collision avoidance (C1)
+    function labelPriority(n,state){
+      if(state==='start'||state==='goal')return 100;
+      var tp=n.type||'';
+      if(tp==='poi')return 80;if(tp==='entrance')return 70;
+      if(tp==='bus_stop'||tp==='subway_station'||tp==='train_station')return 60;
+      if(n.poi_category)return 50;if(tp==='intersection')return 20;
+      return 10;
+    }
+    // Collect visible nodes with priorities
+    var visNodes=this._getVisibleNodes();
+    var labeled=[];
+    for(var i=0;i<visNodes.length;i++){
+      var n=visNodes[i],state=this.state[n.node_id]||'normal';
+      labeled.push({node:n,state:state,priority:labelPriority(n,state)});
+    }
+    // Sort by priority descending (C2)
+    labeled.sort(function(a,b){return b.priority-a.priority});
+    // Draw nodes
+    for(var i=0;i<labeled.length;i++){
+      var item=labeled[i],n=item.node,state=item.state;
+      var isStart=state==='start',isGoal=state==='goal';
+      var floorOff=this._getFloorOffsetY(n.floor);
+      var p=this._toPixel(n.x,n.y+floorOff);
+      // Clip check
+      if(p.x<-20||p.x>this.viewW+20||p.y<-20||p.y>this.viewH+20)continue;
+      var tc=typeColors[n.type]||typeColors.intersection;
+      var r=typeSizes[n.type]||8;
+      if(isStart||isGoal)r=14;
+      // Glow (B3)
+      if(!isStart&&!isGoal){
+        ctx.shadowColor=tc.glow;ctx.shadowBlur=r*1.2;
+      }
+      // Fill
+      ctx.fillStyle=isStart?'rgba(16,185,129,0.85)':isGoal?'rgba(239,68,68,0.85)':tc.fill;
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+      // Stroke
+      ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();
+      // Start/goal rings
+      if(isStart||isGoal){
+        ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);
+        ctx.strokeStyle=isStart?'#10b981':'#ef4444';ctx.lineWidth=2.5;ctx.stroke();
+        // Inner pulsing ring
+        ctx.beginPath();ctx.arc(p.x,p.y,r+7,0,Math.PI*2);
+        ctx.strokeStyle=isStart?'rgba(16,185,129,0.35)':'rgba(239,68,68,0.35)';ctx.lineWidth=1.5;ctx.stroke();
+      }
+      // POI indicator
+      if(n.poi_category&&!isStart&&!isGoal){
+        ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(p.x,p.y-r-2,3,0,Math.PI*2);ctx.fill();
+      }
+      // Label with collision avoidance (C2)
+      var rawLabel=(n.name||n.node_id);
+      var maxLen=this.zoom<0.6?4:this.zoom<1.2?6:8;
+      var label=rawLabel.length>maxLen?rawLabel.slice(0,maxLen-1)+'…':rawLabel;
+      var fontSize=Math.round(8*Math.min(this.zoom,2));
+      if(fontSize<6)fontSize=6;
+      ctx.font=fontSize+'px "Microsoft YaHei",Arial,sans-serif';
+      var labelW=ctx.measureText(label).width;
+      var labelH=fontSize;
+      var lx=p.x-labelW/2,ly=p.y+r+3;
+      // Bound check
+      if(lx<2)lx=2;if(lx+labelW>this.viewW-2)lx=this.viewW-2-labelW;
+      // Collision check (C2): always show start/goal, greedy for others
+      var collides=false;
+      if(!isStart&&!isGoal){
+        for(var j=0;j<this._placedLabels.length;j++){
+          var pl=this._placedLabels[j];
+          if(lx<pl.x+pl.w&&lx+labelW>pl.x&&ly<pl.y+pl.h&&ly+labelH>pl.y){collides=true;break}
+        }
+      }
+      if(!collides){
+        ctx.fillStyle=isStart?'#10b981':isGoal?'#ef4444':'rgba(226,232,240,0.85)';
+        ctx.textAlign='left';
+        ctx.fillText(label,lx,ly+labelH-2);
+        this._placedLabels.push({x:lx,y:ly,w:labelW,h:labelH});
+      }
+    }
+  }
+
+  // ── Path highlight ──
+  _drawPathHighlight(){
+    if(this.highlightPath.length<2)return;var ctx=this.ctx;
+    ctx.strokeStyle='#3b82f6';ctx.lineWidth=3*this.zoom;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.shadowColor='rgba(59,130,246,0.5)';ctx.shadowBlur=10;
+    ctx.beginPath();var started=false;
+    for(var i=0;i<this.highlightPath.length;i++){
+      var n=this.nodeMap[this.highlightPath[i]];if(!n)continue;
+      var floorOff=this._getFloorOffsetY(n.floor);
+      var p=this._toPixel(n.x,n.y+floorOff);
+      if(!started){ctx.moveTo(p.x,p.y);started=true}else ctx.lineTo(p.x,p.y);
+    }
+    if(started)ctx.stroke();ctx.shadowBlur=0;
+    // Animated dots at path nodes
+    if(started&&this.zoom>0.5){
+      for(var i=0;i<this.highlightPath.length;i++){
+        var n2=this.nodeMap[this.highlightPath[i]];if(!n2)continue;
+        var fo2=this._getFloorOffsetY(n2.floor);
+        var pp=this._toPixel(n2.x,n2.y+fo2);
+        ctx.fillStyle='rgba(59,130,246,0.8)';ctx.beginPath();ctx.arc(pp.x,pp.y,3,0,Math.PI*2);ctx.fill();
+      }
+    }
+  }
+
+  // ── Vehicle rendering ──
+  _drawVehicles(){
+    var a=this._vehAnim;var vehicleIds=Object.keys(a.smoothed);
+    var colors=['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+    for(var i=0;i<vehicleIds.length;i++){
+      var vid=vehicleIds[i],s=a.smoothed[vid],t=a.target[vid];
+      if(!t)continue;
+      var p=this._toPixel(s.x,s.y),ctx=this.ctx;
+      var color=colors[i%colors.length];
+      var isRunning=t.status==='running';
+      var r=6,alpha=isRunning?1:0.5;
+      // Route trail
+      if(t.route_path&&t.current_position_index>0){
+        ctx.strokeStyle='rgba(148,163,184,0.15)';ctx.lineWidth=2;ctx.setLineDash([3,6]);
+        ctx.beginPath();var started=false;
+        for(var j=0;j<=t.current_position_index&&j<t.route_path.length;j++){
+          var tn=this.nodeMap[t.route_path[j]];if(!tn)continue;
+          var tp=this._toPixel(tn.x,tn.y);
+          if(!started){ctx.moveTo(tp.x,tp.y);started=true}else ctx.lineTo(tp.x,tp.y);
+        }
+        if(started){ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([])}
+      }
+      // Direction cone
+      if(isRunning&&t.route_path&&t.current_position_index+1<t.route_path.length){
+        var nnid=t.route_path[t.current_position_index+1],nn=this.nodeMap[nnid];
+        if(nn){
+          var np=this._toPixel(nn.x,nn.y),dx=np.x-p.x,dy=np.y-p.y,dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist>1){dx/=dist;dy/=dist}
+          ctx.fillStyle=color;ctx.beginPath();
+          var tipX=p.x+dx*(r+6),tipY=p.y+dy*(r+6);
+          ctx.moveTo(tipX,tipY);
+          ctx.lineTo(tipX-dx*8-dy*3.5,tipY-dy*8+dx*3.5);
+          ctx.lineTo(tipX-dx*8+dy*3.5,tipY-dy*8-dx*3.5);
+          ctx.closePath();ctx.fill();
+        }
+      }
+      // Vehicle body
+      ctx.globalAlpha=alpha;ctx.fillStyle=color;
+      ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.8;ctx.stroke();
+      ctx.globalAlpha=1;
+      // Status ring
+      if(isRunning){
+        ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();
+      }else{
+        ctx.strokeStyle='rgba(148,163,184,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([2,2]);
+        ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+      }
+      // Label
+      var label=(t.name||vid).length>6?(t.name||vid).slice(0,5)+'…':(t.name||vid);
+      ctx.fillStyle='#e2e8f0';ctx.font='bold 9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';
+      ctx.fillText(label,p.x,p.y-r-9);
+      // Speed badge
+      if(isRunning){
+        var speedText=Math.round(t.speed_kmh||0)+'km/h';
+        ctx.fillStyle='rgba(15,23,42,0.85)';var tw=ctx.measureText(speedText).width+8;
+        ctx.fillRect(p.x-tw/2,p.y+r+6,tw,14);
+        ctx.fillStyle='#94a3b8';ctx.font='8px "Microsoft YaHei",Arial,sans-serif';
+        ctx.fillText(speedText,p.x,p.y+r+17);
+      }
+    }
+  }
+
+  // ── Zoom indicator (D5) ──
+  _drawZoomIndicator(){
+    var ctx=this.ctx;
+    ctx.fillStyle='rgba(15,23,42,0.8)';ctx.fillRect(this.viewW-58,this.viewH-24,54,20);
+    ctx.fillStyle='#94a3b8';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText(Math.round(this.zoom*100)+'%',this.viewW-31,this.viewH-9);
+  }
+
+  // ── Floor buttons (Phase E) ──
+  _updateFloorButtons(){
+    var el=$('sm_floor_btns');
+    if(!el)return;
+    if(this.floors.length<=1){el.style.display='none';return}
+    el.style.display='';
+    var html='<button class="btn btn-xs '+(this.activeFloor===null?'btn-accent':'btn-outline-light')+'" onclick="_smRenderer.switchFloor(null)" style="font-size:10px">全部</button>';
+    for(var i=0;i<this.floors.length;i++){
+      var f=this.floors[i];
+      var label=f<0?'B'+(1-f)+'F':(f+1)+'F';
+      var active=this.activeFloor===f;
+      html+='<button class="btn btn-xs '+(active?'btn-accent':'btn-outline-light')+'" onclick="_smRenderer.switchFloor('+f+')" style="font-size:10px">'+label+'</button>';
+    }
+    el.innerHTML=html;
+  }
+
+  // ── Animation ──
+  _startAnimation(){
+    var a=this._vehAnim;if(a.animId)return;a.active=true;a.lastTime=0;
+    var self=this;
+    function step(now){
+      if(!self._vehAnim.active){self._vehAnim.animId=null;return}
+      var dt=a.lastTime?(now-a.lastTime)/1000:0.016;
+      a.lastTime=now;self._interpolateVehicles(dt);
+      var hasActive=false;
+      for(var k in a.target)if(a.target[k].status==='running'){hasActive=true;break}
+      if(hasActive||Object.keys(a.target).length>0)self.render();
+      var allDone=Object.keys(a.target).length===0;
+      for(var k in a.smoothed){var s2=a.smoothed[k],t2=a.target[k];if(t2){var dx=Math.abs(s2.x-t2.x),dy=Math.abs(s2.y-t2.y);if(dx>0.1||dy>0.1)allDone=false}}
+      if(allDone&&!hasActive){self._vehAnim.animId=null;self._vehAnim.active=false;self.render();return}
+      self._vehAnim.animId=requestAnimationFrame(step);
+    }
+    this._vehAnim.animId=requestAnimationFrame(step);
+  }
+  _interpolateVehicles(dt){
+    var a=this._vehAnim,factor=Math.min(dt*8,0.5);
+    for(var k in a.target){
+      var t=a.target[k],s=a.smoothed[k];if(!s)continue;
+      if(t.status==='running'){s.x+=(t.x-s.x)*factor;s.y+=(t.y-s.y)*factor}
+      else{s.x+=(t.x-s.x)*factor*2;s.y+=(t.y-s.y)*factor*2}
+    }
+  }
+
+  // ── Hit test (accounts for zoom) ──
+  hitTest(mx,my){
+    var rect=this.canvas.getBoundingClientRect(),cx=mx-rect.left,cy=my-rect.top;
+    var visNodes=this._getVisibleNodes();
+    for(var i=0;i<visNodes.length;i++){
+      var n=visNodes[i],p=this._toPixel(n.x,n.y+this._getFloorOffsetY(n.floor));
+      var dx=cx-p.x,dy=cy-p.y;if(Math.sqrt(dx*dx+dy*dy)<14*this.zoom)return n.node_id;
+    }
+    return null;
+  }
+
+  // ── Zoom reset (D5) ──
+  resetZoom(){
+    this.zoom=1;this.panX=0;this.panY=0;this.render();
+  }
+}
+
+/* ============================================================
+   SMART NAV PAGE — PAGE 8: 智慧导航
+   ============================================================ */
+var _smRenderer=null,_smSceneId='',_smNodes=[],_smEdges=[];
+var _smStart='',_smGoal='',_smMode='driving',_smAlgo='dijkstra',_smHeuristic='euclidean';
+var _smSSE=null,_smVehicles=[],_smTrafficData=null,_smAlerts=[];
+
+function renderSmartNav(){
+  return '<h3 class="fw-bold mb-1"><i class="fa-solid fa-brain text-accent me-2"></i>智慧导航</h3>'+
+    '<p class="text-secondary small mb-3">多地图 · 8算法 · 5出行模式 · 实时交通 · 车辆监管 · 毫秒级寻路</p>'+
+    '<div class="row g-3">'+
+      // LEFT SIDEBAR
+      '<div class="col-lg-3"><div class="sm-sidebar">'+
+        // Scene selector
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-map me-2"></i>地图场景</div>'+
+        '<div class="card-body"><div id="sm_scenes" class="d-flex flex-wrap gap-1 mb-2"></div>'+
+        '<div class="d-flex gap-2"><select class="form-select form-select-sm" id="sm_mode"><option value="walking">🚶 步行</option><option value="driving" selected>🚗 驾车</option><option value="bus">🚌 公交</option><option value="train">🚄 火车</option><option value="subway">🚇 地铁</option></select>'+
+        '<select class="form-select form-select-sm" id="sm_algo"><option value="dijkstra">Dijkstra</option><option value="a_star">A*</option><option value="bfs">BFS</option><option value="bidirectional_dijkstra">双向Dijkstra</option><option value="bidirectional_bfs">双向BFS</option><option value="congestion_avoidance">避堵</option><option value="multi_criteria">多目标</option></select></div></div></div>'+
+        // Path inputs
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-route me-2"></i>路径规划</div>'+
+        '<div class="card-body">'+
+          '<label class="form-label">起点 (点击地图或输入)</label><input class="form-control form-control-sm mb-2" id="sm_start" placeholder="N001">'+
+          '<label class="form-label">终点</label><input class="form-control form-control-sm mb-2" id="sm_goal" placeholder="N025">'+
+          '<div id="sm_heur_wrap"><label class="form-label">启发函数</label><select class="form-select form-select-sm mb-2" id="sm_heuristic"><option value="euclidean">欧几里得</option><option value="manhattan">曼哈顿</option><option value="floor_aware">楼层感知</option></select></div>'+
+          '<div class="d-grid gap-2">'+
+            '<button class="btn btn-primary btn-rounded btn-sm" onclick="smFindPath()"><i class="fa-solid fa-magnifying-glass me-1"></i>查找路径</button>'+
+            '<button class="btn btn-accent btn-rounded btn-sm" onclick="smCompareAll()"><i class="fa-solid fa-code-compare me-1"></i>对比全部算法</button>'+
+          '</div>'+
+        '</div></div>'+
+        // POI Search
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-magnifying-glass-location me-2"></i>兴趣点搜索</div>'+
+        '<div class="card-body">'+
+          '<select class="form-select form-select-sm mb-2" id="sm_poi_cat"><option value="">全部分类</option><option value="scenic">景点</option><option value="food">美食</option><option value="parking">停车场</option><option value="hospital">医院</option></select>'+
+          '<input class="form-control form-control-sm mb-2" id="sm_poi_radius" placeholder="搜索半径 (留空=不限)" type="number">'+
+          '<button class="btn btn-outline-light btn-rounded btn-sm w-100" onclick="smSearchNearby()"><i class="fa-solid fa-search me-1"></i>搜索附近</button>'+
+          '<div id="sm_poi_results" class="mt-2" style="max-height:150px;overflow-y:auto;font-size:11px"></div>'+
+        '</div></div>'+
+      '</div></div>'+
+      // CENTER CANVAS
+      '<div class="col-lg-6">'+
+        '<div class="canvas-wrap mb-2" style="position:relative"><canvas id="sm_canvas" style="width:100%;height:65vh;min-height:400px;max-height:800px"></canvas>'+
+          '<div class="canvas-tooltip" id="sm_tooltip"></div>'+
+          // Floor buttons (Phase E3)
+          '<div id="sm_floor_btns" class="floor-btns" style="display:none"></div>'+
+          // Legend toggle (Phase F2)
+          '<button class="legend-toggle-btn" id="sm_legend_btn" onclick="smToggleLegend()" title="图例"><i class="fa-solid fa-list"></i></button>'+
+          // Zoom reset button (Phase D5)
+          '<button class="zoom-reset-btn" onclick="_smRenderer.resetZoom()" title="重置视图"><i class="fa-solid fa-arrows-to-circle"></i></button>'+
+          // Legend overlay (Phase F2)
+          '<div class="legend-overlay" id="sm_legend" style="display:none">'+
+            '<div class="legend-title">图例 <button class="legend-close" onclick="smToggleLegend()">✕</button></div>'+
+            '<div class="legend-section"><b>节点类型</b>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(239,68,68,0.7)"></span>入口</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(245,158,11,0.75)"></span>兴趣点</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(6,182,212,0.7)"></span>公交站</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(99,102,241,0.7)"></span>地铁站</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(34,197,94,0.6)"></span>停车场</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(236,72,153,0.65)"></span>餐厅</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(250,204,21,0.75)"></span>景点</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(239,68,68,0.75)"></span>医院</div>'+
+              '<div class="legend-row"><span class="legend-dot" style="background:rgba(100,116,139,0.55)"></span>路口</div>'+
+            '</div>'+
+            '<div class="legend-section"><b>道路类型</b>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(239,68,68,0.45);height:3px"></span>高速</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(148,163,184,0.4);height:2px"></span>主干道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(6,182,212,0.45);height:2px;border:none;border-top:2px dashed rgba(6,182,212,0.45)"></span>公交道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(34,197,94,0.35);height:1.5px"></span>步道</div>'+
+              '<div class="legend-row"><span class="legend-line" style="background:rgba(139,92,246,0.45);height:2px;border:none;border-top:2px dashed rgba(139,92,246,0.45)"></span>地铁</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="info-bar mb-2">'+
+          '<span><i class="fa-solid fa-route"></i>距离: <b class="val" id="sm_dist">-</b></span>'+
+          '<span><i class="fa-solid fa-eye"></i>访问: <b class="val" id="sm_visited">-</b></span>'+
+          '<span><i class="fa-solid fa-clock"></i>耗时: <b class="val" id="sm_time">-</b></span>'+
+          '<span><i class="fa-solid fa-coins"></i>费用: <b class="val" id="sm_cost">-</b></span>'+
+          '<span><i class="fa-solid fa-arrow-right-arrow-left"></i>路径节点: <b class="val" id="sm_path_len">-</b></span>'+
+          '<span class="sse-indicator ms-auto"><span class="sse-dot" id="sm_sse_dot"></span><span id="sm_sse_text">未连接</span></span>'+
+        '</div>'+
+        // Path detail
+        '<div class="card card-custom mb-2" id="sm_path_detail" style="display:none"><div class="card-header"><i class="fa-solid fa-list-ol me-2"></i>路径详情</div>'+
+        '<div class="card-body" id="sm_path_steps" style="max-height:200px;overflow-y:auto;font-size:12px"></div></div>'+
+      '</div>'+
+      // RIGHT SIDEBAR
+      '<div class="col-lg-3"><div class="sm-sidebar">'+
+        // Traffic
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-car-on me-2"></i>实时交通 <span class="badge badge-accent ms-1" id="sm_traffic_badge">0</span></div>'+
+        '<div class="card-body" id="sm_traffic_status" style="max-height:180px;overflow-y:auto;font-size:12px"><p class="text-muted small mb-0">无交通事件</p></div></div>'+
+        // Vehicles
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-truck me-2"></i>车辆监管 <span class="badge badge-primary ms-1" id="sm_veh_count">0</span></div>'+
+        '<div class="card-body" id="sm_vehicle_list" style="max-height:160px;overflow-y:auto"><p class="text-muted small mb-0">无车辆</p></div>'+
+        '<div class="card-footer"><div class="d-flex gap-1">'+
+          '<button class="btn btn-outline-light btn-xs flex-fill" onclick="smAddRandomVehicle()"><i class="fa-solid fa-plus me-1"></i>随机添加</button>'+
+          '<button class="btn btn-outline-danger btn-xs flex-fill" onclick="smClearVehicles()"><i class="fa-solid fa-trash me-1"></i>清空</button>'+
+        '</div></div></div>'+
+        // Alerts
+        '<div class="card card-custom mb-3"><div class="card-header"><i class="fa-solid fa-bell me-2"></i>导航告警</div>'+
+        '<div class="card-body alert-list" id="sm_alerts"><p class="text-muted small mb-0">无告警</p></div></div>'+
+        // Simulation + Navigation
+        '<div class="card card-custom"><div class="card-header"><i class="fa-solid fa-play me-2"></i>模拟 & 导航</div>'+
+        '<div class="card-body">'+
+          '<div class="d-grid gap-2 mb-2">'+
+            '<button class="btn btn-outline-warning btn-xs" id="sm_traffic_sim_btn" onclick="smTrafficSimToggle()"><i class="fa-solid fa-traffic-light me-1"></i>启动交通模拟</button>'+
+            '<button class="btn btn-outline-info btn-xs" id="sm_vehicle_sim_btn" onclick="smVehicleSimToggle()"><i class="fa-solid fa-truck-fast me-1"></i>启动车辆模拟</button>'+
+          '</div>'+
+          '<hr class="my-2" style="border-color:var(--border-subtle)">'+
+          '<div class="d-grid gap-2">'+
+            '<button class="btn btn-outline-success btn-xs" id="sm_nav_start_btn" onclick="smStartNavigation()"><i class="fa-solid fa-location-arrow me-1"></i>开始实时导航</button>'+
+            '<button class="btn btn-outline-danger btn-xs" id="sm_nav_stop_btn" onclick="smStopNavigation()" style="display:none"><i class="fa-solid fa-stop me-1"></i>停止导航</button>'+
+            '<button class="btn btn-outline-light btn-xs" onclick="smConnectSSE()"><i class="fa-solid fa-plug me-1"></i>连接SSE流</button>'+
+          '</div>'+
+        '</div></div>'+
+      '</div></div>'+
+    '</div>';
+}
+
+async function initSmartNav(){
+  // Protocol check: warn if opened via file:// (API calls will fail)
+  if(window.location.protocol==='file:'){
+    toast('⚠ 检测到 file:// 协议 — API请求将失败。<br>请通过 <code>python backend/app.py</code> 启动服务器后访问 <b>http://localhost:5001</b>','error');
+    $('sm_content').innerHTML='<div class="alert alert-warning m-3"><i class="fa-solid fa-triangle-exclamation me-2"></i><b>无法加载智慧导航</b><br><small>此页面需要HTTP服务器。请运行 <code>python backend/app.py</code> 然后访问 <code>http://localhost:5001</code></small></div>';
+    return;
+  }
+  // Load metadata + scenes
+  var metaR=await api('/api/smart/meta');
+  if(!metaR.success){toast('加载SmartNav元数据失败','error');return}
+  var scenes=metaR.data.scenes||[];
+  _smSceneId=metaR.data.active_scene_id||(scenes.length>0?scenes[0].scene_id:'');
+  // Render scene tabs
+  var tabsHtml='';for(var i=0;i<scenes.length;i++){var s=scenes[i];tabsHtml+='<span class="scene-tab'+(s.scene_id===_smSceneId?' active':'')+'" data-scene="'+esc(s.scene_id)+'" onclick="smSwitchScene(\''+esc(s.scene_id)+'\')"><i class="fa-solid fa-map-pin"></i> '+esc(s.name)+' <span class="scene-badge">'+s.node_count+'/'+s.edge_count+'</span></span>'}$('sm_scenes').innerHTML=tabsHtml;
+  // Init canvas
+  if(!_smRenderer){var canvas=$('sm_canvas');if(canvas){_smRenderer=new SmartNavRenderer(canvas);
+    // Node click via custom event (distinguishes clicks from drags)
+    canvas.addEventListener('node-click',function(e){
+      var nid=e.detail.nodeId;
+      if(!_smStart||(_smStart&&_smGoal)){_smStart=nid;_smGoal='';$('sm_start').value=nid;$('sm_goal').value='';toast('起点: '+nid,'info')}
+      else{_smGoal=nid;$('sm_goal').value=nid;toast('终点: '+nid,'info')}
+    });
+    // Hover tooltip
+    canvas.addEventListener('mousemove',function(e){
+      var nid=_smRenderer.hitTest(e.clientX,e.clientY);
+      if(nid){var n=_smRenderer.nodeMap[nid];if(n){var tt=$('sm_tooltip');tt.style.display='block';tt.style.left=(e.clientX-canvas.getBoundingClientRect().left+15)+'px';tt.style.top=(e.clientY-canvas.getBoundingClientRect().top-30)+'px';tt.innerHTML='<b>'+esc(n.name||nid)+'</b><br><small>'+esc(nid)+' · '+esc(n.type||'')+(n.floor!==undefined?' · '+(n.floor<0?'B'+(1-n.floor)+'F':(n.floor+1)+'F'):'')+'</small>'}}
+      else{var tt=$('sm_tooltip');tt.style.display='none'}
+    });
+  }}}
+  // Load active scene
+  await smLoadScene(_smSceneId);
+  // Set dropdown values
+  var modeSel=$('sm_mode');if(modeSel)modeSel.value=_smMode;
+  var algoSel=$('sm_algo');if(algoSel){algoSel.value=_smAlgo;algoSel.addEventListener('change',function(){_smAlgo=this.value;var heurWrap=$('sm_heur_wrap');heurWrap.style.display=this.value==='a_star'?'block':'none'})}
+  var heurSel=$('sm_heuristic');if(heurSel)heurSel.value=_smHeuristic;
+  var heurWrap=$('sm_heur_wrap');if(heurWrap)heurWrap.style.display=_smAlgo==='a_star'?'block':'none';
+  var modeSel2=$('sm_mode');if(modeSel2)modeSel2.addEventListener('change',function(){_smMode=this.value});
+  // Auto-connect SSE
+  smConnectSSE();
+  // Refresh traffic
+  await smRefreshTraffic();
+}
+
+async function smLoadScene(sceneId){
+  _smSceneId=sceneId;
+  // Activate on server
+  await api('/api/smart/scenes/'+sceneId+'/activate',{method:'POST'});
+  // Load graph data
+  var r=await api('/api/smart/scenes/'+sceneId);
+  if(!r.success){toast('加载场景失败','error');return}
+  _smNodes=r.data.nodes||[];_smEdges=r.data.edges||[];
+  // Update scene tabs
+  document.querySelectorAll('#sm_scenes .scene-tab').forEach(function(t){t.classList.toggle('active',t.dataset.scene===sceneId)});
+  if(_smRenderer){_smRenderer.loadScene(_smNodes,_smEdges);_smRenderer.setState({},[])}
+  smRefreshTraffic();
+}
+
+async function smSwitchScene(sceneId){await smLoadScene(sceneId);toast('已切换场景: '+sceneId,'info')}
+
+function smToggleLegend(){
+  var el=$('sm_legend');if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function smZoomReset(){if(_smRenderer)_smRenderer.resetZoom()}
+
+async function smFindPath(){
+  var start=$('sm_start').value.trim(),goal=$('sm_goal').value.trim();
+  if(!start||!goal){toast('请设置起点和终点','warning');return}
+  _smStart=start;_smGoal=goal;
+  _smMode=$('sm_mode').value;_smAlgo=$('sm_algo').value;_smHeuristic=$('sm_heuristic').value;
+  var body={start:start,goal:goal,transport_mode:_smMode,algorithm:_smAlgo,heuristic:_smHeuristic,scene_id:_smSceneId};
+  var r=await api('/api/smart/path',{method:'POST',body:body});
+  if(!r.success){toast('寻路失败: '+r.message,'error');return}
+  var p=r.data.result;
+  $('sm_dist').textContent=p.total_distance.toFixed(0)+' m';
+  $('sm_visited').textContent=p.nodes_visited||0;
+  $('sm_time').textContent=(p.total_time||0).toFixed(1)+' s';
+  $('sm_cost').textContent='¥'+(p.total_cost||0).toFixed(2);
+  $('sm_path_len').textContent=p.path_length||0;
+  // Highlight on renderer
+  var state={};if(start)state[start]='start';if(goal)state[goal]='goal';
+  if(_smRenderer)_smRenderer.setState(state,p.path||[]);
+  // Show path steps
+  if(p.path_coords&&p.path_coords.length>0){
+    var stepsHtml='<div class="dir-step"><div class="dir-step-num">1</div><div class="dir-instruction"><b>起点:</b> '+esc(p.path_coords[0].name||start)+'</div></div>';
+    for(var i=1;i<p.path_coords.length;i++){var c=p.path_coords[i];stepsHtml+='<div class="dir-step"><div class="dir-step-num">'+(i+1)+'</div><div class="dir-instruction">'+esc(c.name||c.node_id)+(c.floor!==undefined?' <small class="text-muted">('+c.floor+'F)</small>':'')+'<div class="dir-meta">'+esc(c.node_id)+'</div></div></div>'}
+    $('sm_path_steps').innerHTML=stepsHtml;$('sm_path_detail').style.display='block';
+  }
+}
+
+async function smCompareAll(){
+  var start=$('sm_start').value.trim(),goal=$('sm_goal').value.trim();
+  if(!start||!goal){toast('请设置起点和终点','warning');return}
+  _smMode=$('sm_mode').value;
+  var r=await api('/api/smart/compare',{method:'POST',body:{start:start,goal:goal,transport_mode:_smMode,scene_id:_smSceneId}});
+  if(!r.success){toast('对比失败: '+r.message,'error');return}
+  // Build comparison table
+  var results=r.data.results||[],summary=r.data.summary||{};
+  var rows=results.map(function(p){return'<tr><td><b>'+esc(p.algorithm)+'</b></td><td>'+(p.total_distance||0).toFixed(0)+' m</td><td>'+(p.nodes_visited||0)+'</td><td>'+(p.execution_time_ms||0).toFixed(1)+' ms</td><td>'+(p.path_length||0)+'</td><td>'+(p.is_reachable?'<span class="badge badge-success">可达</span>':'<span class="badge badge-danger">不可达</span>')+'</td></tr>'}).join('');
+  $('sm_path_steps').innerHTML='<div class="table-responsive"><table class="table table-custom table-sm mb-0"><thead><tr><th>算法</th><th>距离</th><th>访问节点</th><th>耗时</th><th>路径长</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="mt-2 small text-secondary">最短距离: <b class="text-primary">'+(summary.shortest_distance||0).toFixed(0)+' m</b> | 最快: <b class="text-primary">'+(summary.fastest_path||0).toFixed(1)+' s</b> | 最少探索: <b class="text-primary">'+(summary.least_visited||0)+'</b></div>';
+  $('sm_path_detail').style.display='block';
+  // Highlight best path
+  var best=null;for(var i=0;i<results.length;i++){if(results[i].is_reachable&&(!best||results[i].total_distance<best.total_distance))best=results[i]}
+  if(best&&_smRenderer){var state={};state[start]='start';state[goal]='goal';_smRenderer.setState(state,best.path||[])}
+}
+
+async function smSearchNearby(){
+  var cat=$('sm_poi_cat').value,radius=$('sm_poi_radius').value;
+  var params='scene_id='+_smSceneId;
+  if(_smStart)params+='&center_node='+_smStart;
+  if(cat)params+='&categories='+cat;
+  if(radius)params+='&radius='+radius;
+  var r=await api('/api/smart/search/nearby?'+params);
+  if(!r.success){toast('搜索失败','error');return}
+  var results=r.data.results||[];
+  var html='';for(var i=0;i<results.length;i++){var p=results[i];html+='<div class="d-flex justify-content-between align-items-center mb-1" style="cursor:pointer" onclick="$(\'sm_goal\').value=\''+esc(p.node_id)+'\';_smGoal=\''+esc(p.node_id)+'\';toast(\'终点: '+esc(p.name)+'\',\'info\')"><span><span class="badge badge-accent me-1">'+esc(p.category_label||p.category)+'</span>'+esc(p.name)+'</span><span class="text-muted">'+p.distance.toFixed(0)+'m '+esc(p.direction||'')+'</span></div>'}$('sm_poi_results').innerHTML=html||'<p class="text-muted small">无结果</p>';
+  // Highlight POIs on map
+  if(_smRenderer&&results.length>0){var state={};for(var i=0;i<results.length;i++)state[results[i].node_id]='poi';if(_smStart)state[_smStart]='start';_smRenderer.setState(state,[])}
+}
+
+async function smRefreshTraffic(){
+  var r=await api('/api/smart/traffic');
+  if(!r.success)return;_smTrafficData=r.data;
+  var congested=r.data.congested_edges||0,blocked=r.data.blocked_edges||0;
+  $('sm_traffic_badge').textContent=congested+blocked;
+  $('sm_traffic_badge').className='badge ms-1 '+(blocked>0?'badge-danger':congested>0?'badge-warning':'badge-success');
+  var details=r.data.congested_details||[],blockages=r.data.blockages||[];
+  var html='';for(var i=0;i<blockages.length;i++){html+='<div class="mb-1"><span class="traffic-dot blocked"></span><b>阻塞:</b> '+esc(blockages[i].edge)+' <small class="text-muted">'+esc(blockages[i].desc||'')+'</small></div>'}$('sm_traffic_status').innerHTML=html||'<p class="text-muted small mb-0">无交通事件</p>';
+  if(_smRenderer)_smRenderer.setTraffic(r.data);
+}
+
+// ---- Vehicles ----
+async function smAddRandomVehicle(){
+  if(_smNodes.length<2){toast('节点不足','warning');return}
+  var idx1=Math.floor(Math.random()*_smNodes.length),idx2=Math.floor(Math.random()*_smNodes.length);
+  if(idx1===idx2)idx2=(idx1+1)%_smNodes.length;
+  var path=[_smNodes[idx1].node_id,_smNodes[idx2].node_id];
+  var vId='V'+(_smVehicles.length+1);
+  var r=await api('/api/smart/vehicles',{method:'POST',body:{vehicle_id:vId,name:'车辆 '+vId,route_path:path,speed_kmh:20+Math.random()*40}});
+  if(r.success){_smVehicles.push(r.data.vehicle);smRefreshVehicles();smRefreshVehiclesCanvas();toast('车辆 '+vId+' 已添加','success')}
+  else toast('添加失败: '+r.message,'error');
+}
+
+async function smClearVehicles(){
+  for(var i=_smVehicles.length-1;i>=0;i--){await api('/api/smart/vehicles/'+_smVehicles[i].vehicle_id,{method:'DELETE'})}
+  _smVehicles=[];smRefreshVehicles();smRefreshVehiclesCanvas();toast('车辆已清空','info');
+}
+
+function smRefreshVehicles(){
+  $('sm_veh_count').textContent=_smVehicles.length;
+  var html='';for(var i=0;i<_smVehicles.length;i++){var v=_smVehicles[i];html+='<div class="vehicle-row"><span><b>'+esc(v.vehicle_id)+'</b> <small class="text-muted">'+esc(v.name||'')+'</small></span><div class="vehicle-bar"><div class="vehicle-bar-fill" style="width:'+(v.progress_pct||0)+'%"></div></div><span class="text-muted small">'+(v.progress_pct||0).toFixed(0)+'%</span><span class="badge '+(v.status==='running'?'badge-success':'badge-warning')+'">'+esc(v.status)+'</span></div>'}$('sm_vehicle_list').innerHTML=html||'<p class="text-muted small mb-0">无车辆</p>';
+}
+
+function smRefreshVehiclesCanvas(){
+  if(_smRenderer)_smRenderer.setVehicles(_smVehicles);
+}
+
+// ---- Simulation ----
+var _smTrafficSimRunning=false,_smVehicleSimRunning=false;
+async function smTrafficSimToggle(){
+  if(_smTrafficSimRunning){await api('/api/smart/simulation/traffic/stop',{method:'POST'});_smTrafficSimRunning=false;$('sm_traffic_sim_btn').innerHTML='<i class="fa-solid fa-traffic-light me-1"></i>启动交通模拟';$('sm_traffic_sim_btn').className='btn btn-outline-warning btn-xs'}
+  else{await api('/api/smart/simulation/traffic/start',{method:'POST',body:{interval_ms:3000}});_smTrafficSimRunning=true;$('sm_traffic_sim_btn').innerHTML='<i class="fa-solid fa-stop me-1"></i>停止交通模拟';$('sm_traffic_sim_btn').className='btn btn-warning btn-xs'}
+}
+
+async function smVehicleSimToggle(){
+  if(_smVehicleSimRunning){await api('/api/smart/simulation/vehicle/stop',{method:'POST'});_smVehicleSimRunning=false;$('sm_vehicle_sim_btn').innerHTML='<i class="fa-solid fa-truck-fast me-1"></i>启动车辆模拟';$('sm_vehicle_sim_btn').className='btn btn-outline-info btn-xs'}
+  else{await api('/api/smart/simulation/vehicle/start',{method:'POST',body:{interval_ms:100,speed_scale:10}});_smVehicleSimRunning=true;$('sm_vehicle_sim_btn').innerHTML='<i class="fa-solid fa-stop me-1"></i>停止车辆模拟';$('sm_vehicle_sim_btn').className='btn btn-info btn-xs'}
+}
+
+// ---- Real-time Navigation ----
+var _smNavActive=false;
+async function smStartNavigation(){
+  if(!_smStart||!_smGoal){toast('请先设置起点和终点','warning');return}
+  _smMode=$('sm_mode').value;
+  // First find a path
+  var r=await api('/api/smart/path',{method:'POST',body:{start:_smStart,goal:_smGoal,transport_mode:_smMode,algorithm:_smAlgo,heuristic:_smHeuristic,scene_id:_smSceneId}});
+  if(!r.success||!r.data.result.is_reachable){toast('无法规划路径','error');return}
+  var path=r.data.result.path;
+  // Start navigation
+  var nr=await api('/api/smart/navigation/start',{method:'POST',body:{planned_path:path,goal_id:_smGoal,transport_mode:_smMode,scene_id:_smSceneId}});
+  if(!nr.success){toast('导航启动失败: '+nr.message,'error');return}
+  _smNavActive=true;$('sm_nav_start_btn').style.display='none';$('sm_nav_stop_btn').style.display='block';
+  toast('实时导航已启动! 目标: '+_smGoal,'success');
+}
+
+async function smStopNavigation(){
+  await api('/api/smart/navigation/stop',{method:'POST'});_smNavActive=false;
+  $('sm_nav_start_btn').style.display='block';$('sm_nav_stop_btn').style.display='none';
+  toast('导航已停止','info');
+}
+
+// ---- SSE ----
+function smConnectSSE(){
+  if(_smSSE){_smSSE.close();_smSSE=null}
+  _smSSE=new EventSource('/api/smart/navigation/stream');
+  _smSSE.addEventListener('init',function(e){var d=JSON.parse(e.data);$('sm_sse_dot').classList.add('connected');$('sm_sse_text').textContent='已连接';console.log('SSE init:',d)});
+  _smSSE.addEventListener('heartbeat',function(e){$('sm_sse_dot').classList.add('connected');$('sm_sse_text').textContent='已连接'});
+  _smSSE.addEventListener('traffic_update',function(e){var d=JSON.parse(e.data);_smTrafficData=d;smRefreshTrafficUI(d)});
+  _smSSE.addEventListener('vehicle_update',function(e){var d=JSON.parse(e.data);_smVehicles=d.vehicles||[];smRefreshVehicles();if(_smRenderer)_smRenderer.setVehicles(_smVehicles)});
+  _smSSE.addEventListener('navigation_update',function(e){var d=JSON.parse(e.data);if(d.progress)$('sm_path_len').textContent=d.progress.pct+'%'});
+  _smSSE.addEventListener('alert',function(e){var d=JSON.parse(e.data);_smAlerts.unshift(d);if(_smAlerts.length>20)_smAlerts=_smAlerts.slice(0,20);smRefreshAlerts()});
+  _smSSE.addEventListener('scene_changed',function(e){var d=JSON.parse(e.data);toast('场景切换: '+d.name,'info')});
+  _smSSE.addEventListener('navigation_started',function(e){_smNavActive=true;$('sm_nav_start_btn').style.display='none';$('sm_nav_stop_btn').style.display='block'});
+  _smSSE.addEventListener('navigation_stopped',function(e){_smNavActive=false;$('sm_nav_start_btn').style.display='block';$('sm_nav_stop_btn').style.display='none'});
+  _smSSE.onerror=function(){$('sm_sse_dot').classList.remove('connected');$('sm_sse_text').textContent='重连中...';setTimeout(function(){if(_smSSE&&_smSSE.readyState===EventSource.CLOSED)smConnectSSE()},3000)};
+  toast('SSE流已连接','success');
+}
+
+function smRefreshTrafficUI(d){
+  var congested=(d.congested_edges||0)+(d.blocked_edges||0);$('sm_traffic_badge').textContent=congested;
+  $('sm_traffic_badge').className='badge ms-1 '+(d.blocked_edges>0?'badge-danger':d.congested_edges>0?'badge-warning':'badge-success');
+  var blockages=d.blockages||[],html='';for(var i=0;i<blockages.length;i++)html+='<div class="mb-1"><span class="traffic-dot blocked"></span><b>阻塞:</b> '+esc(blockages[i].edge)+'</div>';
+  var congestedD=d.congested_details||[];for(var i=0;i<congestedD.length;i++)html+='<div class="mb-1"><span class="traffic-dot '+esc(congestedD[i].level)+'"></span>'+esc(congestedD[i].name||congestedD[i].from+'→'+congestedD[i].to)+' <small class="text-muted">'+esc(congestedD[i].label||'')+'</small></div>';
+  $('sm_traffic_status').innerHTML=html||'<p class="text-muted small mb-0">无交通事件</p>';
+  if(_smRenderer)_smRenderer.setTraffic(d);
+}
+
+function smRefreshAlerts(){
+  var html='';for(var i=0;i<Math.min(_smAlerts.length,10);i++){var a=_smAlerts[i];html+='<div class="alert-item '+esc(a.level||'info')+'"><b>'+esc(a.level||'')+'</b> '+esc(a.message||'')+'</div>'}$('sm_alerts').innerHTML=html||'<p class="text-muted small mb-0">无告警</p>';
+}
+
+/* ============================================================
+   MAP RENDERER (Dark Theme + Accessible Mode)
+   ============================================================ */
+class MapRenderer{
+    constructor(canvas){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.floorData=null;this.state={};this.highlightPath=[];this.nodePositions={};this.scaleX=1;this.scaleY=1;this.offsetX=0;this.offsetY=0;this.accessibleMode=false;this._resize();window.addEventListener('resize',()=>this._resize())}
+    _resize(){var dpr=window.devicePixelRatio||1;var rect=this.canvas.getBoundingClientRect();this.canvas.width=rect.width*dpr;this.canvas.height=rect.height*dpr;this.ctx.setTransform(dpr,0,0,dpr,0,0);var pad=30,w=rect.width-pad*2,h=rect.height-pad*2;this.scaleX=w/100;this.scaleY=h/60;this.offsetX=pad;this.offsetY=pad}
+    _toPixel(nx,ny){return{x:nx*this.scaleX+this.offsetX,y:ny*this.scaleY+this.offsetY}}
+    loadFloor(floorData){this.floorData=floorData;this.state={};this.highlightPath=[];this.nodePositions={};this._computeNodePositions();this.render()}
+    setState(nodeStates,path){this.state=nodeStates||{};this.highlightPath=path||[];this.render()}
+    setAccessible(mode){this.accessibleMode=mode;this.render()}
+    render(){if(!this.floorData)return;var rect=this.canvas.getBoundingClientRect();this.ctx.clearRect(0,0,rect.width,rect.height);this._drawEdges();this._drawNodes();this._drawPathHighlight();this._drawStateOverlay()}
+    hitTest(px,py){var rect=this.canvas.getBoundingClientRect(),cx=px-rect.left,cy=py-rect.top;for(var nid in this.nodePositions){var pos=this.nodePositions[nid],dx=cx-pos.x,dy=cy-pos.y;if(Math.sqrt(dx*dx+dy*dy)<14)return nid}return null}
+    _computeNodePositions(){for(var i=0;i<this.floorData.nodes.length;i++){var n=this.floorData.nodes[i];this.nodePositions[n.node_id]=this._toPixel(n.x,n.y)}}
+    _drawEdges(){var ctx=this.ctx,edges=this.floorData.edges||[];ctx.strokeStyle='rgba(148,163,184,0.25)';ctx.lineWidth=1.5;ctx.beginPath();for(var i=0;i<edges.length;i++){var e=edges[i],p1=this.nodePositions[e[0]],p2=this.nodePositions[e[1]];if(!p1||!p2)continue;ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y)}ctx.stroke()}
+    _drawNodes(){for(var i=0;i<this.floorData.nodes.length;i++){var n=this.floorData.nodes[i],p=this.nodePositions[n.node_id];if(!p)continue;this._drawSingleNode(n,p)}}
+    _drawSingleNode(node,pos){
+        var ctx=this.ctx,state=this.state[node.node_id]||'normal',isStart=state==='start',isGoal=state==='goal';
+        var cl={room:'rgba(148,163,184,0.35)',corridor:'rgba(148,163,184,0.2)',stair:'rgba(59,130,246,0.3)',elevator:'rgba(16,185,129,0.3)',entrance:'rgba(239,68,68,0.3)',poi:'rgba(245,158,11,0.3)'};
+        var fc=cl[node.node_type]||cl.room,r=10;ctx.save();ctx.translate(pos.x,pos.y);
+        if(node.node_type==='corridor'){ctx.fillStyle=fc;ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);ctx.fill()}
+        else if(node.node_type==='stair'){ctx.fillStyle=fc;ctx.beginPath();ctx.moveTo(0,-r);ctx.lineTo(r,0);ctx.lineTo(0,r);ctx.lineTo(-r,0);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(59,130,246,0.5)';ctx.lineWidth=1.5;ctx.stroke()}
+        else if(node.node_type==='elevator'){ctx.fillStyle=this.accessibleMode?'rgba(34,197,94,0.35)':fc;ctx.fillRect(-r,-r,r*2,r*2);ctx.strokeStyle=this.accessibleMode?'rgba(34,197,94,0.6)':'rgba(16,185,129,0.5)';ctx.lineWidth=1.5;ctx.strokeRect(-r,-r,r*2,r*2)}
+        else if(node.node_type==='poi'){ctx.fillStyle=fc;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(245,158,11,0.5)';ctx.lineWidth=1.5;ctx.stroke()}
+        else{var w=r*2.2,h=r*1.6;ctx.fillStyle=fc;this._roundRect(ctx,-w/2,-h/2,w,h,3);ctx.fill();ctx.strokeStyle='rgba(148,163,184,0.3)';ctx.lineWidth=1.2;this._roundRect(ctx,-w/2,-h/2,w,h,3);ctx.stroke()}
+        if(isStart||isGoal){ctx.beginPath();ctx.arc(0,0,r+4,0,Math.PI*2);ctx.strokeStyle=isStart?'#10b981':'#ef4444';ctx.lineWidth=2.5;ctx.stroke()}
+        // Wheelchair icon for elevator nodes in accessible mode
+        if(this.accessibleMode&&node.node_type==='elevator'){
+          ctx.fillStyle='#22c55e';ctx.font='bold 14px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillText('♿',0,0);
+        }
+        var label=node.name.length>12?node.name.slice(0,10)+'…':node.name;ctx.fillStyle='#cbd5e1';ctx.font='9px "Microsoft YaHei",Arial,sans-serif';ctx.textAlign='center';ctx.fillText(label,0,r+13);ctx.restore()
+    }
+    _drawPathHighlight(){if(this.highlightPath.length<2)return;var ctx=this.ctx;
+      ctx.strokeStyle=this.accessibleMode?'#22c55e':'#3b82f6';ctx.lineWidth=3;ctx.lineCap='round';
+      ctx.shadowColor=this.accessibleMode?'rgba(34,197,94,0.5)':'rgba(59,130,246,0.5)';ctx.shadowBlur=8;
+      ctx.beginPath();for(var i=0;i<this.highlightPath.length;i++){var p=this.nodePositions[this.highlightPath[i]];if(!p)continue;i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)}ctx.stroke();ctx.shadowBlur=0}
+    _drawStateOverlay(){var ctx=this.ctx;for(var nid in this.state){var s=this.state[nid];if(s==='start'||s==='goal'||s==='normal'||s==='')continue;var p=this.nodePositions[nid];if(!p)continue;if(s==='visited'){ctx.fillStyle='rgba(59,130,246,0.25)';ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fill()}else if(s==='frontier'){ctx.strokeStyle='#fbbf24';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);ctx.stroke()}else if(s==='current'){ctx.fillStyle='rgba(245,158,11,0.5)';ctx.beginPath();ctx.arc(p.x,p.y,10,0,Math.PI*2);ctx.fill()}}}
+    _roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath()}
+}
+
+/* ============================================================
+   ACCESSIBLE MAP RENDERER (extends MapRenderer with green theme)
+   ============================================================ */
+class AccessibleMapRenderer extends MapRenderer{
+    constructor(canvas){super(canvas);this.accessibleMode=true}
+}
+
+/* ============================================================
+   ANIMATION PLAYER
+   ============================================================ */
+class AlgorithmAnimator{
+    constructor(renderer){this.renderer=renderer;this.steps=[];this.currentStep=-1;this.timerId=null;this.speed=200;this.isPlaying=false;this.finalPath=[]}
+    loadSteps(steps,path){this.stop();this.steps=steps||[];this.finalPath=path||[];this.currentStep=-1}
+    play(){if(this.steps.length===0)return false;if(this.currentStep>=this.steps.length-1)this.currentStep=-1;this.isPlaying=true;this._scheduleNext();return true}
+    pause(){this.isPlaying=false;if(this.timerId){clearTimeout(this.timerId);this.timerId=null}}
+    stop(){this.pause();this.currentStep=-1}
+    stepForward(){if(this.currentStep<this.steps.length-1){this.currentStep++;this._applyStep(this.currentStep)}}
+    stepBackward(){if(this.currentStep>0){this.currentStep--;this._applyStep(this.currentStep)}else if(this.currentStep===0){this.currentStep=-1;this.renderer.setState({},[])}}
+    setSpeed(ms){this.speed=Math.max(50,Math.min(2000,ms))}
+    _scheduleNext(){if(!this.isPlaying)return;if(this.currentStep<this.steps.length-1){var self=this;this.timerId=setTimeout(function(){self.currentStep++;self._applyStep(self.currentStep);self._scheduleNext()},this.speed)}else{this.isPlaying=false;this._showFinalPath()}}
+    _applyStep(index){var step=this.steps[index];if(!step)return;var state={};if(step.visited)for(var i=0;i<step.visited.length;i++)state[step.visited[i]]='visited';if(step.frontier)for(var i=0;i<step.frontier.length;i++){if(state[step.frontier[i]]!=='visited')state[step.frontier[i]]='frontier'}if(step.current)state[step.current]='current';this.renderer.setState(state,[])}
+    _showFinalPath(){var state={};for(var i=0;i<this.finalPath.length;i++)state[this.finalPath[i]]='path';this.renderer.setState(state,this.finalPath)}
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+(function init(){
+    buildNavTabs();renderPage('dashboard');
+    setInterval(function(){var el=$('top_time');if(el)el.textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})},10000);
+    // Close search dropdowns on outside click
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('.search-wrap')){$('nav_start_dd').classList.add('hidden');$('nav_goal_dd').classList.add('hidden')}
+    });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

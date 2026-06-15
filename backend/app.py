@@ -1,6 +1,6 @@
 """CampusPath + SmartNav Flask API Server.
 
-Provides 56 REST endpoints + SSE stream across two route modules:
+Provides 57 REST endpoints + SSE stream across two route modules:
 
 Core campus indoor navigation (app.py — 22 endpoints):
 - Building metadata, floor layouts, node listings
@@ -10,7 +10,7 @@ Core campus indoor navigation (app.py — 22 endpoints):
 - Accessible (wheelchair) routing with elevator wait simulation
 - Recent search history, metadata
 
-Smart Navigation (routes_smart.py — 34 endpoints):
+Smart Navigation (routes_smart.py — 35 endpoints + SSE + health):
 - Map/Scene management, POI search, traffic & congestion
 - Vehicle tracking, real-time navigation with SSE stream
 - Simulation control (traffic + vehicle), history, cross-scene node detail
@@ -67,7 +67,7 @@ VALID_ALGORITHMS = [
 @app.route("/")
 def index():
     """Serve the main SPA page."""
-    return send_from_directory(app.static_folder, "index.html")
+    return send_from_directory(app.static_folder, "app.html")
 
 
 @app.route("/<path:path>")
