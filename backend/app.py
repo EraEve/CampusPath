@@ -897,7 +897,7 @@ if __name__ == "__main__":
     print(f"  Edges: {building.graph.total_edges}")
     print(f"  Floors: {building.floors}")
     print(f"  URL: http://localhost:5001")
-    print(f"  Frontend: http://localhost:5001/index.html")
+    print(f"  Frontend: http://localhost:5001/app.html")
     print(f"  SmartNav APIs: /api/smart/* (30+ endpoints + SSE)")
     print(f"{'='*60}\n")
     app.run(debug=True, host="0.0.0.0", port=5001)
